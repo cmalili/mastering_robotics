@@ -6,7 +6,7 @@ from pydobot import Dobot
 port = list_ports.comports()[0].device
 device = Dobot(port=port)
 
-pose = device._get_pose()
+pose = device.get_pose()
 print(pose)
 position = pose.position
 
