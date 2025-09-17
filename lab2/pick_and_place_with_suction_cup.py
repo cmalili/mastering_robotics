@@ -35,6 +35,24 @@ def pick_and_place_with_suction_cup(x1,y1,z1,r1,x2,y2,z2,r2, offset=50):
     end = time.time()
     return end-start
 
+x1,y1,z1,r1 = 0,0,0,0
+x2,y2,z2,r2 = 0,0,0,0
+x3,y3,z3,r3 = 0,0,0,0
+x4,y4,z4,r4 = 0,0,0,0
+x5,y5,z5,r5 = 0,0,0,0
+x6,y6,z6,r6 = 0,0,0,0
+x7,y7,z7,r7 = 0,0,0,0
+x8,y8,z8,r8 = 0,0,0,0
+
+# moving blocks from first pallet to second pallet 
+for i in range(4):
+    pick_and_place_with_suction_cup(X,Y)
+
+# moving blocks back from second pallet to first pallet
+for i in range(4):
+    pick_and_place_with_suction_cup(Y,X)
+
+
 def pick_and_place_with_gripper(x1,y1,z1,r1,x2,y2,z2,r2, offset=50):
     start = time.time()
     device.move_to(x=x1,y=y1,z=z1,r=r1,mode=1)      # move to block position
