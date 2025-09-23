@@ -1,21 +1,10 @@
-
-#from pydobot.dobot import MODE_PTP
 import pydobotplus
 
 device = pydobotplus.Dobot(port="/dev/ttyACM0")
-#device = pydobot.Dobot(port="/dev/tty.usbserial-XXXX")
 
-device.home()
+#device.home()
 
 pose, joint = device.get_pose()
-
-#print(f"pose : {pose}, #joint : {joint}")
-
-#[x, y, z, r] = pose
-
-#[j1, j2, j3, j4] = joint
-
-# position, joint = pose.position, pose.joints
 
 print(pose)
 
@@ -34,7 +23,7 @@ device.speed(10, 10)
 #device.grip(True) # close gripper
 #device.grip(False) # open gripper
 
-device.suck(True) # Turn on suction cup
-device.suck(False) # Turn off suction cup
+#device.suck(True) # Turn on suction cup
+#device.suck(False) # Turn off suction cup
 
 device.close()
