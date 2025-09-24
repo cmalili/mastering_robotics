@@ -6,9 +6,11 @@
 
 import pydobotplus
 import time
+import cv2
+
+from ultralytics import YOLO
 
 device = pydobotplus.Dobot(port="/dev/ttyACM0")
-#device = pydobot.Dobot(port="/dev/tty.usbserial-XXXX")
 
 device.home()
 
@@ -47,29 +49,17 @@ def pick_and_place_with_suction_cup(PICK_UP, DROP, offset=80):
 pick_and_place_with_suction_cup(PICK_UP, PALLET_A_DROP)
 
 
-# Corners of pallet number 2
-p2_corners = []
-p2_corners.append([x5,y5,z5,r5])
-p2_corners.append([x6,y6,z6,r6])
-p2_corners.append([x7,y7,z7,r7])
-p2_corners.append([x8,y8,z8,r8])
+cap = cv2.VideoCapture(5)
 
 
-# moving blocks from first pallet to second pallet
-p1_p2_times = [] 
-for p1, p2 in zip(p1_corners, p2_corners):
-    t = pick_and_place_with_gripper(p1[0],p1[1],p1[2],p1[3],
-                                p2[0],p2[1],p2[2],p2[3])
-    p1_p2_times.append(t)
-    print(f"It takes time : {t}s to move block from corner {p1} to  corner {p2}")
+if not cap.isOpened():
+    raise RuntimeError("Cannot open camera")
 
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-# moving blocks back from second pallet to first pallet
-p2_p1_times = []
-for p1, p2 in zip(p2_corners, p1_corners):
-    t = pick_and_place_with_gripper(p1[0],p1[1],p1[2],p1[3],
-                                p2[0],p2[1],p2[2],p2[3])
-    p2_p1_times.append(t)
-    print(f"It takes time : {t}s to move block from corner {p1} to  corner {p2}")
+print("Current FPS (reported by driver): ", cap.get(cv2.CAP_PROP_FPS))
+print("Current resolution: {}x{}".format(int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 
+                                         int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
 
-
+model = YOLO("yolo5s.pt")
