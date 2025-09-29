@@ -63,3 +63,21 @@ print("Current resolution: {}x{}".format(int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
                                          int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
 
 model = YOLO("yolo5s.pt")
+
+prev_t = time.time()
+
+win_name = 'Camera Stream + YOLO'
+
+def detect_image():
+
+    ret, frame = cap.read()
+    if not ret:
+        print("Can't receive frame. Exiting...")
+        #break
+
+    results = model(frame, verbose=False)  
+    r = results[0]
+    names = r.names
+
+    return names
+
