@@ -2,7 +2,7 @@ import pydobotplus
 
 device = pydobotplus.Dobot(port="/dev/ttyACM0")
 
-#device.home()
+device.home()
 
 pose, joint = device.get_pose()
 

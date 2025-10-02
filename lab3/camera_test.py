@@ -3,7 +3,7 @@ import time
 import pydobotplus
 from ultralytics import YOLO
 
-cap = cv2.VideoCapture(2)   # Make sure your camera index is correct           
+cap = cv2.VideoCapture(0)   # Make sure your camera index is correct           
 if not cap.isOpened():
     raise RuntimeError("Cannot open camera")
 
@@ -38,9 +38,9 @@ def detect():
     start = time.time()
     duration = 0
 
-    labels = []
+    #labels = []
 
-    while duration < 3:
+    while duration < 2:
         ret, frame = cap.read()
         if not ret:
             print("Can't receive frame. Exiting...")
@@ -55,20 +55,24 @@ def detect():
 
             conf = r.boxes.conf.cpu().numpy()
             cls  = r.boxes.cls.cpu().numpy().astype(int)
-            names = r.names  
+            names = r.names
+
+            labels = []  
 
             for (x1, y1, x2, y2), c, k in zip(xyxy, conf, cls):
-                x1, y1, x2, y2 = map(int, (x1, y1, x2, y2))
-                w, h = x2 - x1, y2 - y1
-                cx, cy = x1 + w // 2, y1 + h // 2  
-                label = f"{names[k]} {c:.2f}"
 
-                labels.append(label)
+                if c > 0.0:
+                    x1, y1, x2, y2 = map(int, (x1, y1, x2, y2))
+                    w, h = x2 - x1, y2 - y1
+                    cx, cy = x1 + w // 2, y1 + h // 2  
+                    label = f"{names[k]} {c:.2f}"
 
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.circle(frame, (cx, cy), 3, (0, 255, 255), -1)
-                cv2.putText(frame, label, (x1, max(0, y1 - 5)),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    labels.append(label)
+
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.circle(frame, (cx, cy), 3, (0, 255, 255), -1)
+                    cv2.putText(frame, label, (x1, max(0, y1 - 5)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
                 
         now = time.time()
@@ -83,6 +87,8 @@ def detect():
         cv2.imshow(win_name, frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+    #cap.release()
+    #cv2.destroyAllWindows()
     
     return labels
 
@@ -93,7 +99,7 @@ def pick_and_place_with_suction_cup(PICK_UP, DROP, offset=80):
 
     start = time.time()
 
-    device.move_to(x=x1,y=y1,z=z1+offset,r=r1,mode=1)
+    #device.move_to(x=x1,y=y1,z=z1+offset,r=r1,mode=1)
     device.move_to(x=x1,y=y1,z=z1,r=r1,mode=1)      # move to block position
     device.suck(True)                               # turn on suction cup
     device.move_to(x=x1,y=y1,z=z1+offset,r=r1,mode=1)      # move vertically up
@@ -105,7 +111,7 @@ def pick_and_place_with_suction_cup(PICK_UP, DROP, offset=80):
     end = time.time()
     return end-start
 
-PICK_UP = [297.90,7.77,-55.34,1.49]
+PICK_UP = [297.90,7.77,-57.34,1.49]
 
 ABOVE_PICK_UP = [297.90,7.77,-55.34 + 30,1.49]
 
@@ -122,7 +128,9 @@ for i in range(6):
     # detect
     # if object is food move to A, if object is in vehicle move to B
     device.move_to(x=CAMERA_ABOVE[0],y=CAMERA_ABOVE[1],z=CAMERA_ABOVE[2],r=CAMERA_ABOVE[3],mode=1)
+    #time.sleep(3)
     names = detect()
+    time.sleep(3)
     names = [item.split()[0] for item in names]
 
     device.move_to(x=ABOVE_PICK_UP[0],y=ABOVE_PICK_UP[1],z=ABOVE_PICK_UP[2],r=ABOVE_PICK_UP[3],mode=1)
