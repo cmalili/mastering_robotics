@@ -6,47 +6,36 @@
 
 import pydobotplus
 import time
-import cv2
-
-from ultralytics import YOLO
-
-device = pydobotplus.Dobot(port="/dev/ttyACM0")
-
-device.home()
-
-(pose, joint) = device.get_pose()
-
-# position, joint = pose.position, pose.joints
-
-print(pose)
-
-HOME = pose
-PICK_UP = [0,0,0,0]
-PALLET_A_DROP = [0,0,0,0]
-PALLET_B_DROP = [0,0,0,0]
 
 
-device.speed(10, 10)
+class DobotController:
 
-def pick_and_place_with_suction_cup(PICK_UP, DROP, offset=80):
-    x1, y1, z1, r1 = PICK_UP
-    x2, y2, z2, r2 = DROP
+    def __init__(self, port="/dev/ttyACM0"):
+        self.device = pydobotplus.Dobot(port=port)
+        self.device.home()
+        print(f"Dobot homed")
 
-    start = time.time()
 
-    device.move_to(x=x1,y=y1,z=z1+offset,r=r1,mode=1)
-    device.move_to(x=x1,y=y1,z=z1,r=r1,mode=1)      # move to block position
-    device.suck(True)                               # turn on suction cup
-    device.move_to(x=x1,y=y1,z=z1+offset,r=r1,mode=1)      # move vertically up
-    device.move_to(x=x2,y=y2,z=z2+offset,r=r2,mode=1)      # move to block destination
-    device.move_to(x=x2,y=y2,z=z2,r=r2,mode=1)      # move vertically down to block destination
-    device.suck(False)
-    time.sleep(2)
-    device.move_to(x=x2,y=y2,z=z2+offset,r=r2,mode=1)
-    end = time.time()
-    return end-start
+    def pick_and_place(self, PICK_UP, DROP, offset=80):
+        x1, y1, z1, r1 = PICK_UP
+        x2, y2, z2, r2 = DROP
 
-pick_and_place_with_suction_cup(PICK_UP, PALLET_A_DROP)
+        start = time.time()
+
+        self.device.move_to(x=x1,y=y1,z=z1+offset,r=r1,mode=1)
+        self.device.move_to(x=x1,y=y1,z=z1,r=r1,mode=1)      # move to block position
+        self.device.suck(True)                               # turn on suction cup
+        self.device.move_to(x=x1,y=y1,z=z1+offset,r=r1,mode=1)      # move vertically up
+        self.device.move_to(x=x2,y=y2,z=z2+offset,r=r2,mode=1)      # move to block destination
+        self.device.move_to(x=x2,y=y2,z=z2,r=r2,mode=1)      # move vertically down to block destination
+        self.device.suck(False)
+        time.sleep(2)
+        self.device.move_to(x=x2,y=y2,z=z2+offset,r=r2,mode=1)
+        end = time.time()
+        return end-start
+
+    def home(self):
+        self.device.home()
 
 
 cap = cv2.VideoCapture(5)
