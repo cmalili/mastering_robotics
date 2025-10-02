@@ -16,6 +16,10 @@ class VisionSystem:
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
         self.model = YOLO(model_path)
+
+        #wanted_classes = ["banana", "apple", "pizza", "car", "bicycle", "airplane"]
+        #self.allowed_ids = [i for i, name in self.model.names.items() if name in wanted_classes]
+
         self.conf_thresh = conf_thresh
         self.prev_time = time.time() 
 
@@ -35,6 +39,7 @@ class VisionSystem:
                 print("Frame not received")
                 break
 
+            #results = self.model(frame, classes = self.allowed_ids, verbose=False)
             results = self.model(frame, verbose=False)              # specify classes
             r = results[0]
 
