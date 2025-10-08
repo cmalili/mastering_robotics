@@ -1,2 +1,22 @@
 maze/autogen_maze/lib/
 autogen_crash_course/.env
+# large/binary assets
+*.pt
+*.weights
+*.onnx
+*.ckpt
+*.pth
+*.tflite
+*.pb
+*.bin
+*.zip
+*.tar
+*.tar.gz
+*.7z
+# images/videos if you don’t need them versioned
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.mov
