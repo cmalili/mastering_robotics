@@ -7,7 +7,7 @@ FOOD = ["banana", "apple", "pizza"]
 VEHICLES = ["car", "bicycle", "airplane"]
 
 # Predefined positions
-PICK_UP = [297.90, 7.77, -57.34, 1.49]
+PICK_UP = [297.90, 7.77, -59.34, 1.49]
 ABOVE_PICK_UP = [297.90, 7.77, -25.34, 1.49]
 CAMERA_ABOVE = [232.95, 3.14, -9.50, 0.77]
 PALLET_A = [294.29,-129.25,-24.24,-23.71]
@@ -18,17 +18,18 @@ detection_queue = queue.Queue()
 
 def vision_thread(vision: VisionSystem):
     """continuously make detections and push them to the queue"""
-    names = vision.detect(duration=1, show=False)   # run YOLO for 1 second
-    if names:
-        detection_queue.put(names)
-        time.sleep(1)                               # sleep to avoid overloading the cpu
+    while True:
+        names = vision.detect(duration=1.0, show=True)   # run YOLO for 1 second
+        if names:
+            detection_queue.put(names)
+            time.sleep(1)                               # sleep to avoid overloading the cpu
 
 
 def robot_thread(robot: DobotController):
     """continuously consume detections and act"""
     while True:
         try:
-            names = detection_queue.get(timeout=5)
+            names = detection_queue.get(timeout=30)
         except queue.Empty:
             print("No detections for 5s, homing and stopping")
             robot.home()
@@ -37,6 +38,7 @@ def robot_thread(robot: DobotController):
         names = [n.split()[0] for n in names]
         print(f"Robot detectect {names}")
 
+        robot.device.move_to(*CAMERA_ABOVE, mode=1)
         robot.device.move_to(*ABOVE_PICK_UP, mode=1)
 
         if set(names) & set(FOOD):
@@ -52,7 +54,8 @@ def robot_thread(robot: DobotController):
 
 def main():
 
-    vision = VisionSystem(model_path='yolo8s.pt', conf_thresh=0.5)
+    print("starting")
+    vision = VisionSystem(model_path='yolov8s.pt', conf_thresh=0.0)
     robot = DobotController(port="/dev/ttyACM0")
 
     try:
@@ -69,5 +72,5 @@ def main():
         vision.release()
         print("Task ended")
 
-    if __name__=="__main__":
-        main()
+if __name__=="__main__":
+    main()

@@ -5,7 +5,7 @@ from ultralytics import YOLO
 
 class VisionSystem:
 
-    def __init__(self, model_path='yolo8n.pt', cam_index=1, conf_thresh=0.5):
+    def __init__(self, model_path='yolo8n.pt', cam_index=0, conf_thresh=0.5):
 
         self.cap = cv2.VideoCapture(cam_index)   # Make sure your camera index is correct           
         
@@ -59,8 +59,8 @@ class VisionSystem:
 
             # FPS overlay
             now = time.time()
-            fps = 1.0 / (now - self.prev_t)
-            self.prev_t = now
+            fps = 1.0 / (now - self.prev_time)
+            self.prev_time = now
             cv2.putText(frame, f"FPS: {fps:.1f}", (10,25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255),2)
 
             if show:
