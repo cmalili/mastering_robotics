@@ -55,3 +55,6 @@ venv/
 # project-specific env
 tictactobot/xo_env/
 **/xo_env/
+
+__pycache__/
+*.pyc

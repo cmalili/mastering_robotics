@@ -80,29 +80,12 @@ def vision_loop(cap):
 
             # Draw bounding boxes for visualization
             display = draw_boxes_bgr(frame.copy(), preds)
+
+            # Update shared frame and board
             with lock:
                 last_frame = display
-
-
-            # ---- Parse detections and update board ----
-            for det in preds:
-                label = det.get("class") or det.get("label")
-                x, y = det.get("x"), det.get("y")
-                if label not in ["X", "O"] or x is None or y is None:
-                    continue
-
-                # Map detection to board cell (assuming grid spans 3x3 evenly)
-                row = int((y / frame.shape[0]) * 3)
-                col = int((x / frame.shape[1]) * 3)
-                row, col = min(max(row, 0), 2), min(max(col, 0), 2)
-
-                # Only add new moves
-                if board_state[row][col] == "":
-                    board_state[row][col] = label
-                    print(f"[Vision] New {label} detected at cell ({row}, {col})")
-                    move_queue.put((label, (row, col)))
-
-            
+                # for now we just update board_state visually
+                board_state = [["" for _ in range(3)] for _ in range(3)]
 
             time.sleep(0.1)
 
@@ -145,9 +128,7 @@ def game_loop():
 
 # === (Optional) Robot Thread ===
 def robot_loop():
-    #from dobot_control import draw_grid, draw_x, draw_o
-    from dobot_control_sim import draw_grid, draw_x, draw_o
-
+    from dobot_control import draw_grid, draw_x, draw_o
     print("[Robot] Thread started. Drawing grid...")
     try:
         draw_grid()
