@@ -20,3 +20,4 @@ autogen_crash_course/.env
 *.gif
 *.mp4
 *.mov
+__pycache__/
