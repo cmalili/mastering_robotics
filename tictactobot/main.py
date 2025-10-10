@@ -88,6 +88,14 @@ def vision_loop(cap):
             for det in preds:
                 label = det.get("class") or det.get("label")
                 x, y = det.get("x"), det.get("y")
+                conf = det.get("confidence") or det.get("score") or 0.0
+
+                # --- Filter: only accept confident detections ---
+                if conf < 0.75:
+                    continue  # skip weak detections
+                
+
+
                 if label not in ["X", "O"] or x is None or y is None:
                     continue
 
@@ -101,8 +109,6 @@ def vision_loop(cap):
                     board_state[row][col] = label
                     print(f"[Vision] New {label} detected at cell ({row}, {col})")
                     move_queue.put((label, (row, col)))
-
-            
 
             time.sleep(0.1)
 
