@@ -25,7 +25,10 @@ board_state = [["" for _ in range(3)] for _ in range(3)]
 last_frame = None
 lock = threading.Lock()
 stop_flag = threading.Event()
+grid_drawn_event = threading.Event()
+start_game_event = threading.Event()
 move_queue = queue.Queue()
+turn = "human"
 
 
 # === Helper for drawing boxes ===
@@ -43,9 +46,15 @@ def draw_boxes_bgr(img_bgr, preds):
 # === Vision Thread ===
 def vision_loop(cap):
     """Continuously capture frames and run inference."""
-    global last_frame, board_state
+    global last_frame, board_state, turn
+
+    #start_game_event.wait()
 
     print("[Vision] Thread started.")
+
+    start_game_event.wait()
+    grid_drawn_event.wait()
+
     while not stop_flag.is_set():
         ok, frame = cap.read()
         if not ok:
@@ -95,7 +104,6 @@ def vision_loop(cap):
                     continue  # skip weak detections
                 
 
-
                 if label not in ["X", "O"] or x is None or y is None:
                     continue
 
@@ -105,10 +113,13 @@ def vision_loop(cap):
                 row, col = min(max(row, 0), 2), min(max(col, 0), 2)
 
                 # Only add new moves
-                if board_state[row][col] == "":
+                if board_state[row][col] == "" and turn == "human":
                     board_state[row][col] = label
                     print(f"[Vision] New {label} detected at cell ({row}, {col})")
-                    move_queue.put((label, (row, col)))
+
+                    if turn == "human":
+                        move_queue.put((label, (row, col)))
+                        turn = "robot"
 
             time.sleep(0.1)
 
@@ -119,17 +130,36 @@ def vision_loop(cap):
     print("[Vision] Thread stopped.")
 
 
-# === Game Logic Thread ===
 def game_loop():
-    global board_state
+    global board_state, turn
     previous = [["" for _ in range(3)] for _ in range(3)]
+
     print("[Game] Thread started.")
+
+    grid_drawn_event.wait()
+
+    # --- Ask who goes first ---
+    choice = ""
+    while choice.lower() not in ["robot", "human"]:
+        choice = input("Who first: Robot or Human? ").strip()
+
+    turn = choice.lower()  # start with chosen turn
+
+    start_game_event.set()
+
+    ai_symbol = "O" if choice.lower() == "human" else "X"
+    human_symbol = "X" if ai_symbol == "O" else "O"
+
+    print(f"[Game] {choice.capitalize()} will go first.")
+    print(f"[Game] Robot plays as '{ai_symbol}', Human plays as '{human_symbol}'")
+
+    # --- Main game loop ---
     while not stop_flag.is_set():
         with lock:
             board = [r[:] for r in board_state]
 
-        # detect human move (simplified placeholder)
-        if board != previous:
+        # --- Human move detected ---
+        if turn == "human" and board != previous:
             previous = [r[:] for r in board]
             winner = check_winner(board)
             if winner:
@@ -141,11 +171,32 @@ def game_loop():
                 stop_flag.set()
                 return
 
-            move = compute_best_move(board)
+            # Human moved → Robot's turn next
+            turn = "robot"
+
+        # --- Robot's turn ---
+        if turn == "robot":
+            move = compute_best_move(board, ai_symbol=ai_symbol, human_symbol=human_symbol)
             if move:
-                print("AI move:", move)
-                move_queue.put(("O", move))
+                print(f"[Game] Robot plays at {move}")
+                move_queue.put((ai_symbol, move))
+                board_state[move[0]][move[1]] = ai_symbol
+
+                winner = check_winner(board_state)
+                if winner:
+                    print(f"🏆 Winner: {winner}")
+                    stop_flag.set()
+                    return
+                if is_draw(board_state):
+                    print("🤝 It's a draw!")
+                    stop_flag.set()
+                    return
+
+            # Robot moved → Human's turn next
+            turn = "human"
+
         time.sleep(1)
+
     print("[Game] Thread stopped.")
 
 
@@ -158,8 +209,11 @@ def robot_loop():
     try:
         draw_grid()
         print("[Robot] Grid drawn.")
+        grid_drawn_event.set()
+
     except Exception as e:
         print("[Robot] Error while drawing grid:", e)
+        grid_drawn_event.set()
 
     # Now wait for AI moves
     while not stop_flag.is_set():
