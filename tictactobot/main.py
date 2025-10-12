@@ -27,6 +27,7 @@ lock = threading.Lock()
 stop_flag = threading.Event()
 grid_drawn_event = threading.Event()
 start_game_event = threading.Event()
+robot_done_event = threading.Event()
 move_queue = queue.Queue()
 turn = "human"
 
@@ -118,7 +119,7 @@ def vision_loop(cap):
                     print(f"[Vision] New {label} detected at cell ({row}, {col})")
 
                     if turn == "human":
-                        move_queue.put((label, (row, col)))
+                        #move_queue.put((label, (row, col)))
                         turn = "robot"
 
             time.sleep(0.1)
@@ -135,52 +136,78 @@ def game_loop():
     previous = [["" for _ in range(3)] for _ in range(3)]
 
     print("[Game] Thread started.")
-
+    print("[Game] Waiting for grid to be drawn...")
     grid_drawn_event.wait()
 
-    # --- Ask who goes first ---
+    # Ask who goes first
     choice = ""
     while choice.lower() not in ["robot", "human"]:
         choice = input("Who first: Robot or Human? ").strip()
 
-    turn = choice.lower()  # start with chosen turn
-
-    start_game_event.set()
-
-    ai_symbol = "O" if choice.lower() == "human" else "X"
+    turn = choice.lower()
+    ai_symbol = "O" if turn == "human" else "X"
     human_symbol = "X" if ai_symbol == "O" else "O"
 
     print(f"[Game] {choice.capitalize()} will go first.")
-    print(f"[Game] Robot plays as '{ai_symbol}', Human plays as '{human_symbol}'")
+    print(f"[Game] Robot='{ai_symbol}', Human='{human_symbol}'")
 
-    # --- Main game loop ---
+    start_game_event.set()  # ✅ Let vision start detecting
+
+    # --- Main loop ---
     while not stop_flag.is_set():
         with lock:
             board = [r[:] for r in board_state]
 
-        # --- Human move detected ---
+        # --- Detect a new human move ---
         if turn == "human" and board != previous:
-            previous = [r[:] for r in board]
-            winner = check_winner(board)
-            if winner:
-                print(f"🏆 Winner: {winner}")
-                stop_flag.set()
-                return
-            if is_draw(board):
-                print("🤝 It's a draw!")
-                stop_flag.set()
-                return
+            diff_cells = []
+            for r in range(3):
+                for c in range(3):
+                    if previous[r][c] == "" and board[r][c] != "":
+                        diff_cells.append((r, c, board[r][c]))
 
-            # Human moved → Robot's turn next
-            turn = "robot"
+            if len(diff_cells) == 0:
+                # no real change (maybe noise)
+                time.sleep(0.2)
+                continue
+
+            elif len(diff_cells) > 1:
+                print("⚠️ Invalid move: multiple new marks detected! Please draw one symbol at a time.")
+                # revert to previous board
+                with lock:
+                    board_state = [r[:] for r in previous]
+                continue
+
+            else:
+                r, c, symbol = diff_cells[0]
+                if symbol != human_symbol:
+                    print(f"⚠️ Invalid move: You are '{human_symbol}', not '{symbol}'. Move ignored.")
+                    with lock:
+                        board_state[r][c] = ""  # undo invalid mark
+                    continue
+
+                # ✅ Valid move
+                previous = [r[:] for r in board]
+                winner = check_winner(board)
+                if winner:
+                    print(f"🏆 Winner: {winner}")
+                    stop_flag.set()
+                    return
+                if is_draw(board):
+                    print("🤝 It's a draw!")
+                    stop_flag.set()
+                    return
+
+                turn = "robot"  # switch turns
 
         # --- Robot's turn ---
         if turn == "robot":
-            move = compute_best_move(board, ai_symbol=ai_symbol, human_symbol=human_symbol)
+            move = compute_best_move(board, ai_symbol, human_symbol)
             if move:
                 print(f"[Game] Robot plays at {move}")
                 move_queue.put((ai_symbol, move))
-                board_state[move[0]][move[1]] = ai_symbol
+                with lock:
+                    board_state[move[0]][move[1]] = ai_symbol
 
                 winner = check_winner(board_state)
                 if winner:
@@ -192,23 +219,24 @@ def game_loop():
                     stop_flag.set()
                     return
 
-            # Robot moved → Human's turn next
             turn = "human"
 
-        time.sleep(1)
+        time.sleep(0.5)
 
     print("[Game] Thread stopped.")
 
 
+
 # === (Optional) Robot Thread ===
 def robot_loop():
-    #from dobot_control import draw_grid, draw_x, draw_o
-    from dobot_control_sim import draw_grid, draw_x, draw_o
+    from dobot_control import draw_grid, draw_x, draw_o, move_to_camera_view
+    #from dobot_control_sim import draw_grid, draw_x, draw_o
 
     print("[Robot] Thread started. Drawing grid...")
     try:
         draw_grid()
         print("[Robot] Grid drawn.")
+        move_to
         grid_drawn_event.set()
 
     except Exception as e:
@@ -242,7 +270,7 @@ def main():
     print("Press 'q' to quit.")
 
     # initialize camera once
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(2)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     if not cap.isOpened():
