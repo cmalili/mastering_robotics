@@ -197,7 +197,7 @@ def draw_R(segments=20):
     # --- 2️⃣ Upper half-circle (the "P" part) ---
     curve_points = []
     for i in range(segments // 2 + 1):
-        theta = math.pi * i / (segments // 2)  # 0 → π
+        theta = math.pi/2 - math.pi * i / (segments // 2)  # 0 → π
 
         y = cy + math.cos(theta) * (width / 2)
         x = x_mid + height/4 + math.sin(theta) * (height / 4)
@@ -211,15 +211,10 @@ def draw_R(segments=20):
     for (x, y) in curve_points:
         device.move_to(x, y, Z_DRAW, 0)
 
-    device.move_to(curve_points[-1][0], curve_points[-1][1], Z_DRAW + LIFT_Z, 0)
-
     # --- 3️⃣ Diagonal leg ---
-    # Start near middle-right of the curve, end at bottom-right
-    x_diag_start, y_diag_start = cx - 1.5, cy   # just below mid
+    # Start at the end of the curve, end at bottom-right
     x_diag_end, y_diag_end = x_bottom, y_right
 
-    device.move_to(x_diag_start, y_diag_start, Z_DRAW + LIFT_Z, 0)
-    device.move_to(x_diag_start, y_diag_start, Z_DRAW, 0)
     device.move_to(x_diag_end, y_diag_end, Z_DRAW, 0)
     device.move_to(x_diag_end, y_diag_end, Z_DRAW + LIFT_Z, 0)
 
