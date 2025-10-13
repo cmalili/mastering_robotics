@@ -86,3 +86,33 @@ def draw_o(row, col, segments = 24):
 
     device.move_to(points[-1][0], points[-1][1], Z_DRAW + LIFT_Z, 0)
     print(f"O drawn at ({row}, {col})")
+
+
+def draw_win():
+    print("Drawing a diagonal line across grid")
+    draw_line(START_X, START_Y, START_X - 3 * GRID_SIZE, START_Y - 3 * GRID_SIZE)
+
+def draw_draw(segments = 24):
+    print(f"Drawing D")
+    
+    radius = GRID_SIZE / 2 - 3
+    cx, cy = START_X - GRID_SIZE * 0.5, START_Y + GRID_SIZE * 0.5
+
+    points = []
+
+    for i in range(segments/2):
+        theta = 2 * math.pi / segments
+        x = cx + math.cos(theta) * radius
+        y = cy + math.sin(theta) * radius
+        points.append((x, y))
+
+    x0, y0 = points[0]
+    device.move_to(x0, y0, Z_DRAW + LIFT_Z, 0)
+    device.move_to(x0, y0, Z_DRAW, 0)
+
+    for (x, y) in points[1:]:
+        device.move_to(x, y, Z_DRAW, 0)
+
+    device.move_to(x0, y0, Z_DRAW, 0)
+    device.move_to(x0, y0, Z_DRAW + LIFT_Z, 0)
+    print(f"D drawn)")
