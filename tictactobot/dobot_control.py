@@ -100,8 +100,8 @@ def draw_draw(segments = 24):
 
     points = []
 
-    for i in range(segments/2):
-        theta = 2 * math.pi / segments
+    for i in range(segments // 2 + 1):
+        theta = 2 * math.pi * i/ segments
         x = cx + math.cos(theta) * radius
         y = cy + math.sin(theta) * radius
         points.append((x, y))
@@ -116,3 +116,50 @@ def draw_draw(segments = 24):
     device.move_to(x0, y0, Z_DRAW, 0)
     device.move_to(x0, y0, Z_DRAW + LIFT_Z, 0)
     print(f"D drawn)")
+
+
+def draw_H():
+    """Draw a capital 'H' below the D position."""
+    print("Drawing H...")
+
+    z_draw = 8.3
+    lift_z = 20
+
+    # Position the H just below the D
+    radius = GRID_SIZE / 2 - 3
+    cx, cy = START_X - GRID_SIZE * 0.5, START_Y + GRID_SIZE * 0.5
+
+    h_offset = GRID_SIZE * 1.2    # how far below the D
+    h_height = 2 * radius         # overall height of H
+    h_width = 2 * radius * 0.6    # slightly narrower than D
+
+    hx_center = cx
+    hy_center = cy - h_offset
+
+    # Compute key coordinates
+    x_left = hx_center - h_width / 2
+    x_right = hx_center + h_width / 2
+    y_top = hy_center + h_height / 2
+    y_bottom = hy_center - h_height / 2
+    y_mid = hy_center
+
+    # --- Left vertical line ---
+    device.move_to(x_left, y_top, z_draw + lift_z, 0)
+    device.move_to(x_left, y_top, z_draw, 0)
+    device.move_to(x_left, y_bottom, z_draw, 0)
+    device.move_to(x_left, y_bottom, z_draw + lift_z, 0)
+
+    # --- Right vertical line ---
+    device.move_to(x_right, y_top, z_draw + lift_z, 0)
+    device.move_to(x_right, y_top, z_draw, 0)
+    device.move_to(x_right, y_bottom, z_draw, 0)
+    device.move_to(x_right, y_bottom, z_draw + lift_z, 0)
+
+    # --- Middle connector ---
+    device.move_to(x_left, y_mid, z_draw + lift_z, 0)
+    device.move_to(x_left, y_mid, z_draw, 0)
+    device.move_to(x_right, y_mid, z_draw, 0)
+    device.move_to(x_right, y_mid, z_draw + lift_z, 0)
+
+    print("H drawn ✅")
+
