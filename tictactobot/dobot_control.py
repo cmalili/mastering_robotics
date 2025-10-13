@@ -103,7 +103,7 @@ def draw_D(segments = 24):
     for i in range(segments // 2 + 1):
         theta = 2 * math.pi * i/ segments
         x = cx + math.cos(theta) * radius
-        y = cy + math.sin(theta) * radius
+        y = cy - math.sin(theta) * radius
         points.append((x, y))
 
     x0, y0 = points[0]
