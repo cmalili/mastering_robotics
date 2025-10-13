@@ -137,11 +137,11 @@ def draw_H():
     hy_center = cy
 
     # Compute key coordinates
-    x_top = hx_center - h_height / 2
-    x_bottom = hx_center + h_height / 2
+    x_top = hx_center + h_height / 2
+    x_bottom = hx_center - h_height / 2
     y_left = hy_center + h_width / 2
     y_right = hy_center - h_width / 2
-    x_mid = hy_center
+    x_mid = hx_center
 
     # --- Left vertical line ---
     device.move_to(x_top, y_left, z_draw + lift_z, 0)
@@ -168,9 +168,6 @@ def draw_R(segments=20):
     """Draw a capital 'R' to the left of D."""
     print("Drawing R...")
 
-    z_draw = 8.3
-    lift_z = 20
-
     # Reference: D is centered roughly at (cx, cy)
     radius = GRID_SIZE / 2 - 3
     d_cx = START_X - GRID_SIZE * 0.5
@@ -192,10 +189,10 @@ def draw_R(segments=20):
     x_mid = cx  # middle for loop and diagonal
 
     # --- 1️⃣ Left vertical line ---
-    device.move_to(x_top, y_left, z_draw + lift_z, 0)
-    device.move_to(x_top, y_left, z_draw, 0)
-    device.move_to(x_bottom, y_left, z_draw, 0)
-    device.move_to(x_bottom, y_left, z_draw + lift_z, 0)
+    device.move_to(x_top, y_left, Z_DRAW + LIFT_Z, 0)
+    device.move_to(x_top, y_left, Z_DRAW, 0)
+    device.move_to(x_bottom, y_left, Z_DRAW, 0)
+    device.move_to(x_bottom, y_left, Z_DRAW + LIFT_Z, 0)
 
     # --- 2️⃣ Upper half-circle (the "P" part) ---
     curve_points = []
@@ -203,35 +200,35 @@ def draw_R(segments=20):
         theta = math.pi * i / (segments // 2)  # 0 → π
 
         y = cy + math.cos(theta) * (width / 2)
-        x = x_mid + math.sin(theta) * (height / 4)
+        x = x_mid + height/4 + math.sin(theta) * (height / 4)
         curve_points.append((x, y))
 
-    # Connect from mid to top of curve
+    # Connect from top left to top of curve
     x0, y0 = x_mid, y_left
-    device.move_to(x0, y0, z_draw + lift_z, 0)
-    device.move_to(x0, y0, z_draw, 0)
+    device.move_to(x_top, y_left, Z_DRAW + LIFT_Z, 0)
+    device.move_to(x_top, y_left, Z_DRAW, 0)
 
     for (x, y) in curve_points:
-        device.move_to(x, y, z_draw, 0)
+        device.move_to(x, y, Z_DRAW, 0)
 
-    device.move_to(curve_points[-1][0], curve_points[-1][1], z_draw + lift_z, 0)
+    device.move_to(curve_points[-1][0], curve_points[-1][1], Z_DRAW + LIFT_Z, 0)
 
     # --- 3️⃣ Diagonal leg ---
     # Start near middle-right of the curve, end at bottom-right
     x_diag_start, y_diag_start = cx - 1.5, cy   # just below mid
     x_diag_end, y_diag_end = x_bottom, y_right
 
-    device.move_to(x_diag_start, y_diag_start, z_draw + lift_z, 0)
-    device.move_to(x_diag_start, y_diag_start, z_draw, 0)
-    device.move_to(x_diag_end, y_diag_end, z_draw, 0)
-    device.move_to(x_diag_end, y_diag_end, z_draw + lift_z, 0)
+    device.move_to(x_diag_start, y_diag_start, Z_DRAW + LIFT_Z, 0)
+    device.move_to(x_diag_start, y_diag_start, Z_DRAW, 0)
+    device.move_to(x_diag_end, y_diag_end, Z_DRAW, 0)
+    device.move_to(x_diag_end, y_diag_end, Z_DRAW + LIFT_Z, 0)
 
     print("R drawn ✅")
 
 
 def draw_E():
     """Draw a capital 'E' below the R position."""
-    print("Drawing H...")
+    print("Drawing E...")
 
     z_draw = 8.3
     lift_z = 20
@@ -248,11 +245,11 @@ def draw_E():
     hy_center = cy + h_offset
 
     # Compute key coordinates
-    x_top = hx_center - h_height / 2
-    x_bottom = hx_center + h_height / 2
+    x_top = hx_center + h_height / 2
+    x_bottom = hx_center - h_height / 2
     y_left = hy_center + h_width / 2
     y_right = hy_center - h_width / 2
-    x_mid = hy_center
+    x_mid = hx_center
 
     # --- Left vertical line ---
     device.move_to(x_top, y_left, z_draw + lift_z, 0)
@@ -260,17 +257,23 @@ def draw_E():
     device.move_to(x_bottom, y_left, z_draw, 0)
     device.move_to(x_bottom, y_left, z_draw + lift_z, 0)
 
-    # --- Right vertical line ---
-    device.move_to(x_top, y_right, z_draw + lift_z, 0)
+    # --- Top horizontal line ---
+    device.move_to(x_top, y_left, z_draw + lift_z, 0)
+    device.move_to(x_top, y_left, z_draw, 0)
     device.move_to(x_top, y_right, z_draw, 0)
-    device.move_to(x_bottom, y_right, z_draw, 0)
-    device.move_to(x_bottom, y_right, z_draw + lift_z, 0)
+    device.move_to(x_top, y_right, z_draw + lift_z, 0)
 
-    # --- Middle connector ---
+    # --- Middle horizontal line ---
     device.move_to(x_mid, y_left, z_draw + lift_z, 0)
     device.move_to(x_mid, y_left, z_draw, 0)
     device.move_to(x_mid, y_right, z_draw, 0)
     device.move_to(x_mid, y_right, z_draw + lift_z, 0)
 
-    print("H drawn ✅")
+    # --- Middle horizontal line ---
+    device.move_to(x_bottom, y_left, z_draw + lift_z, 0)
+    device.move_to(x_bottom, y_left, z_draw, 0)
+    device.move_to(x_bottom, y_right, z_draw, 0)
+    device.move_to(x_bottom, y_right, z_draw + lift_z, 0)
+
+    print("E drawn ✅")
 
