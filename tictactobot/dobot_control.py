@@ -92,7 +92,7 @@ def draw_win():
     print("Drawing a diagonal line across grid")
     draw_line(START_X, START_Y, START_X - 3 * GRID_SIZE, START_Y - 3 * GRID_SIZE)
 
-def draw_draw(segments = 24):
+def draw_D(segments = 24):
     print(f"Drawing D")
     
     radius = GRID_SIZE / 2 - 3
@@ -133,33 +133,144 @@ def draw_H():
     h_height = 2 * radius         # overall height of H
     h_width = 2 * radius * 0.6    # slightly narrower than D
 
-    hx_center = cx
-    hy_center = cy - h_offset
+    hx_center = cx - h_offset
+    hy_center = cy
 
     # Compute key coordinates
-    x_left = hx_center - h_width / 2
-    x_right = hx_center + h_width / 2
-    y_top = hy_center + h_height / 2
-    y_bottom = hy_center - h_height / 2
-    y_mid = hy_center
+    x_top = hx_center - h_height / 2
+    x_bottom = hx_center + h_height / 2
+    y_left = hy_center + h_width / 2
+    y_right = hy_center - h_width / 2
+    x_mid = hy_center
 
     # --- Left vertical line ---
-    device.move_to(x_left, y_top, z_draw + lift_z, 0)
-    device.move_to(x_left, y_top, z_draw, 0)
-    device.move_to(x_left, y_bottom, z_draw, 0)
-    device.move_to(x_left, y_bottom, z_draw + lift_z, 0)
+    device.move_to(x_top, y_left, z_draw + lift_z, 0)
+    device.move_to(x_top, y_left, z_draw, 0)
+    device.move_to(x_bottom, y_left, z_draw, 0)
+    device.move_to(x_bottom, y_left, z_draw + lift_z, 0)
 
     # --- Right vertical line ---
-    device.move_to(x_right, y_top, z_draw + lift_z, 0)
-    device.move_to(x_right, y_top, z_draw, 0)
-    device.move_to(x_right, y_bottom, z_draw, 0)
-    device.move_to(x_right, y_bottom, z_draw + lift_z, 0)
+    device.move_to(x_top, y_right, z_draw + lift_z, 0)
+    device.move_to(x_top, y_right, z_draw, 0)
+    device.move_to(x_bottom, y_right, z_draw, 0)
+    device.move_to(x_bottom, y_right, z_draw + lift_z, 0)
 
     # --- Middle connector ---
-    device.move_to(x_left, y_mid, z_draw + lift_z, 0)
-    device.move_to(x_left, y_mid, z_draw, 0)
-    device.move_to(x_right, y_mid, z_draw, 0)
-    device.move_to(x_right, y_mid, z_draw + lift_z, 0)
+    device.move_to(x_mid, y_left, z_draw + lift_z, 0)
+    device.move_to(x_mid, y_left, z_draw, 0)
+    device.move_to(x_mid, y_right, z_draw, 0)
+    device.move_to(x_mid, y_right, z_draw + lift_z, 0)
+
+    print("H drawn ✅")
+
+
+def draw_R(segments=20):
+    """Draw a capital 'R' to the left of D."""
+    print("Drawing R...")
+
+    z_draw = 8.3
+    lift_z = 20
+
+    # Reference: D is centered roughly at (cx, cy)
+    radius = GRID_SIZE / 2 - 3
+    d_cx = START_X - GRID_SIZE * 0.5
+    d_cy = START_Y + GRID_SIZE * 0.5
+
+    # Offset R to the left of D
+    r_offset = GRID_SIZE * 1.2
+    cx = d_cx
+    cy = d_cy + r_offset
+
+    # Dimensions of R
+    height = 2 * radius
+    width = 2 * radius * 0.9
+
+    x_top = cx + height / 2
+    x_bottom = cx - height / 2
+    y_left = cy + width / 2
+    y_right = cy - width / 2
+    x_mid = cx  # middle for loop and diagonal
+
+    # --- 1️⃣ Left vertical line ---
+    device.move_to(x_top, y_left, z_draw + lift_z, 0)
+    device.move_to(x_top, y_left, z_draw, 0)
+    device.move_to(x_bottom, y_left, z_draw, 0)
+    device.move_to(x_bottom, y_left, z_draw + lift_z, 0)
+
+    # --- 2️⃣ Upper half-circle (the "P" part) ---
+    curve_points = []
+    for i in range(segments // 2 + 1):
+        theta = math.pi * i / (segments // 2)  # 0 → π
+
+        y = cy + math.cos(theta) * (width / 2)
+        x = x_mid + math.sin(theta) * (height / 4)
+        curve_points.append((x, y))
+
+    # Connect from mid to top of curve
+    x0, y0 = x_mid, y_left
+    device.move_to(x0, y0, z_draw + lift_z, 0)
+    device.move_to(x0, y0, z_draw, 0)
+
+    for (x, y) in curve_points:
+        device.move_to(x, y, z_draw, 0)
+
+    device.move_to(curve_points[-1][0], curve_points[-1][1], z_draw + lift_z, 0)
+
+    # --- 3️⃣ Diagonal leg ---
+    # Start near middle-right of the curve, end at bottom-right
+    x_diag_start, y_diag_start = cx - 1.5, cy   # just below mid
+    x_diag_end, y_diag_end = x_bottom, y_right
+
+    device.move_to(x_diag_start, y_diag_start, z_draw + lift_z, 0)
+    device.move_to(x_diag_start, y_diag_start, z_draw, 0)
+    device.move_to(x_diag_end, y_diag_end, z_draw, 0)
+    device.move_to(x_diag_end, y_diag_end, z_draw + lift_z, 0)
+
+    print("R drawn ✅")
+
+
+def draw_E():
+    """Draw a capital 'E' below the R position."""
+    print("Drawing H...")
+
+    z_draw = 8.3
+    lift_z = 20
+
+    # Position the H just below the D
+    radius = GRID_SIZE / 2 - 3
+    cx, cy = START_X - GRID_SIZE * 0.5, START_Y + GRID_SIZE * 0.5
+
+    h_offset = GRID_SIZE * 1.2    # how far below the D and to the left of D
+    h_height = 2 * radius         # overall height of H
+    h_width = 2 * radius * 0.6    # slightly narrower than D
+
+    hx_center = cx - h_offset
+    hy_center = cy + h_offset
+
+    # Compute key coordinates
+    x_top = hx_center - h_height / 2
+    x_bottom = hx_center + h_height / 2
+    y_left = hy_center + h_width / 2
+    y_right = hy_center - h_width / 2
+    x_mid = hy_center
+
+    # --- Left vertical line ---
+    device.move_to(x_top, y_left, z_draw + lift_z, 0)
+    device.move_to(x_top, y_left, z_draw, 0)
+    device.move_to(x_bottom, y_left, z_draw, 0)
+    device.move_to(x_bottom, y_left, z_draw + lift_z, 0)
+
+    # --- Right vertical line ---
+    device.move_to(x_top, y_right, z_draw + lift_z, 0)
+    device.move_to(x_top, y_right, z_draw, 0)
+    device.move_to(x_bottom, y_right, z_draw, 0)
+    device.move_to(x_bottom, y_right, z_draw + lift_z, 0)
+
+    # --- Middle connector ---
+    device.move_to(x_mid, y_left, z_draw + lift_z, 0)
+    device.move_to(x_mid, y_left, z_draw, 0)
+    device.move_to(x_mid, y_right, z_draw, 0)
+    device.move_to(x_mid, y_right, z_draw + lift_z, 0)
 
     print("H drawn ✅")
 
