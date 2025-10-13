@@ -1,65 +1,40 @@
-import cv2
-import time
-import queue
-import threading
-import numpy as np
-import os
-import tempfile
-import base64
+
+import threading, time, queue, json, cv2
 from inference_sdk import InferenceHTTPClient
+from dobot_control_sim import draw_grid, draw_x, draw_o, move_to_camera_view
 from game_manager import check_winner, is_draw
 from minimax import compute_best_move
-# from dobot_control import draw_x, draw_o   # re-enable later once vision stable
 
 # === Configuration ===
-API_URL   = "http://localhost:9001"
 WORKSPACE = "chris-hub"
-WORKFLOW  = "detect-and-classify-3"
-API_KEY   = "1HhSNS3VWex8YfHgeGzJ"
+WORKFLOW = "detect-and-classify-3"
+CAMERA_ID = 0                     # webcam ID
+CAMERA_VIEW = (210, -2.26, 61.9)
 
-client = InferenceHTTPClient(api_url=API_URL, api_key=API_KEY)
-tmp_path = os.path.join(tempfile.gettempdir(), "rf_frame.jpg")
-
-# === Shared Data ===
+# === Globals ===
 board_state = [["" for _ in range(3)] for _ in range(3)]
-last_frame = None
-lock = threading.Lock()
+latest_detection = None
 stop_flag = threading.Event()
-grid_drawn_event = threading.Event()
-start_game_event = threading.Event()
-robot_done_event = threading.Event()
-move_queue = queue.Queue()
-turn = "human"
+lock = threading.Lock()
 
+# === Initialize Roboflow Client ===
+client = InferenceHTTPClient(api_url="http://localhost:9001", api_key=API_KEY)
 
-# === Helper for drawing boxes ===
-def draw_boxes_bgr(img_bgr, preds):
-    for p in preds:
-        cx, cy, w, h = p["x"], p["y"], p["width"], p["height"]
-        x1, y1 = int(cx - w/2), int(cy - h/2)
-        x2, y2 = int(cx + w/2), int(cy + h/2)
-        cv2.rectangle(img_bgr, (x1, y1), (x2, y2), (0,255,0), 2)
-        cv2.putText(img_bgr, f'{p["class"]}:{p["confidence"]:.2f}',
-                    (x1, max(0,y1-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,0), 2)
-    return img_bgr
-
-
-# === Vision Thread ===
-def vision_loop(cap):
-    """Continuously capture frames and run inference."""
-    global last_frame, board_state, turn
-
-    #start_game_event.wait()
+# ===========================================================
+# Vision Thread
+# ===========================================================
+def vision_loop():
+    """Continuously captures frames and updates global latest_detection."""
+    global latest_detection
 
     print("[Vision] Thread started.")
-
-    start_game_event.wait()
-    grid_drawn_event.wait()
+    cap = cv2.VideoCapture(CAMERA_ID)
+    tmp_path = "frame.jpg"
 
     while not stop_flag.is_set():
         ok, frame = cap.read()
         if not ok:
-            print("[Vision] ⚠️ Frame read failed.")
+            print("[Vision] Frame read failed.")
             time.sleep(0.2)
             continue
 
@@ -72,240 +47,163 @@ def vision_loop(cap):
                 images={"image": tmp_path}
             )
 
-            # Parse Roboflow response
-            preds = []
+            # Parse Roboflow response safely
             if isinstance(result, list) and len(result) > 0:
                 result = result[0]
             if isinstance(result, str):
-                import json
-                try:
-                    result = json.loads(result)
-                except json.JSONDecodeError:
-                    print("[Vision] ⚠️ Could not parse JSON")
-                    continue
+                result = json.loads(result)
+
+            preds = []
             if isinstance(result, dict):
                 container = result.get("detection_predictions") or result.get("predictions")
                 if container:
                     preds = container.get("predictions", container) if isinstance(container, dict) else container
 
-            # Draw bounding boxes for visualization
-            display = draw_boxes_bgr(frame.copy(), preds)
-            with lock:
-                last_frame = display
+            # Confidence filtering
+            preds = [p for p in preds if p.get("confidence", 0) >= 0.85]
 
-
-            # ---- Parse detections and update board ----
+            # Build a new board
+            new_board = [["" for _ in range(3)] for _ in range(3)]
             for det in preds:
                 label = det.get("class") or det.get("label")
                 x, y = det.get("x"), det.get("y")
-                conf = det.get("confidence") or det.get("score") or 0.0
-
-                # --- Filter: only accept confident detections ---
-                if conf < 0.75:
-                    continue  # skip weak detections
-                
-
-                if label not in ["X", "O"] or x is None or y is None:
+                if not label or x is None or y is None:
                     continue
+                row = min(max(int((y / frame.shape[0]) * 3), 0), 2)
+                col = min(max(int((x / frame.shape[1]) * 3), 0), 2)
+                new_board[row][col] = label
 
-                # Map detection to board cell (assuming grid spans 3x3 evenly)
-                row = int((y / frame.shape[0]) * 3)
-                col = int((x / frame.shape[1]) * 3)
-                row, col = min(max(row, 0), 2), min(max(col, 0), 2)
-
-                # Only add new moves
-                if board_state[row][col] == "" and turn == "human":
-                    board_state[row][col] = label
-                    print(f"[Vision] New {label} detected at cell ({row}, {col})")
-
-                    if turn == "human":
-                        #move_queue.put((label, (row, col)))
-                        turn = "robot"
-
-            time.sleep(0.1)
+            with lock:
+                latest_detection = new_board
 
         except Exception as e:
             print("[Vision] Error:", e)
             time.sleep(0.5)
-
+    cap.release()
     print("[Vision] Thread stopped.")
 
+# ===========================================================
+# Validation and Helper Functions
+# ===========================================================
+def get_latest_detection():
+    global latest_detection
+    with lock:
+        return [r[:] for r in latest_detection] if latest_detection else None
 
-def game_loop():
-    global board_state, turn
-    previous = [["" for _ in range(3)] for _ in range(3)]
+def validate_human_move(new_board, human_symbol):
+    """Ensure only one valid human move has been added."""
+    global board_state
+    diff = []
+    for r in range(3):
+        for c in range(3):
+            if board_state[r][c] == "" and new_board[r][c] != "":
+                diff.append((r, c, new_board[r][c]))
 
-    print("[Game] Thread started.")
-    print("[Game] Waiting for grid to be drawn...")
-    grid_drawn_event.wait()
+    if len(diff) != 1:
+        print("Invalid: multiple or no new marks detected.")
+        return False
 
-    # Ask who goes first
+    r, c, symbol = diff[0]
+    if symbol != human_symbol:
+        print(f"Invalid: expected '{human_symbol}' but got '{symbol}'.")
+        return False
+
+    board_state[r][c] = human_symbol
+    print(f"[Game] Human move accepted at ({r}, {c}).")
+    return True
+
+def print_board(board):
+    print("\nCurrent board:")
+    for row in board:
+        print(" | ".join(s if s else " " for s in row))
+    print("-" * 9)
+
+# ===========================================================
+# Robot/Game Loop (deterministic)
+# ===========================================================
+def robot_game_loop():
+    global board_state
+
+    print("[Robot] Starting game.")
+    draw_grid()
+    print("[Robot] Grid drawn")
+
+    # Assign default symbols
+    ai_symbol, human_symbol = "X", "O"
+
+    # Ask who starts
     choice = ""
     while choice.lower() not in ["robot", "human"]:
-        choice = input("Who first: Robot or Human? ").strip()
+        choice = input("Who first: Robot or Human? ").strip().lower()
 
-    turn = choice.lower()
-    ai_symbol = "O" if turn == "human" else "X"
-    human_symbol = "X" if ai_symbol == "O" else "O"
-
-    print(f"[Game] {choice.capitalize()} will go first.")
+    if choice == "human":
+        ai_symbol, human_symbol = "O", "X"
+        move_to_camera_view()   # camera ready for human move
     print(f"[Game] Robot='{ai_symbol}', Human='{human_symbol}'")
 
-    start_game_event.set()  # ✅ Let vision start detecting
+    turn = choice
 
-    # --- Main loop ---
+    # --- Main game loop ---
     while not stop_flag.is_set():
-        with lock:
-            board = [r[:] for r in board_state]
-
-        # --- Detect a new human move ---
-        if turn == "human" and board != previous:
-            diff_cells = []
-            for r in range(3):
-                for c in range(3):
-                    if previous[r][c] == "" and board[r][c] != "":
-                        diff_cells.append((r, c, board[r][c]))
-
-            if len(diff_cells) == 0:
-                # no real change (maybe noise)
-                time.sleep(0.2)
-                continue
-
-            elif len(diff_cells) > 1:
-                print("⚠️ Invalid move: multiple new marks detected! Please draw one symbol at a time.")
-                # revert to previous board
-                with lock:
-                    board_state = [r[:] for r in previous]
-                continue
-
-            else:
-                r, c, symbol = diff_cells[0]
-                if symbol != human_symbol:
-                    print(f"⚠️ Invalid move: You are '{human_symbol}', not '{symbol}'. Move ignored.")
-                    with lock:
-                        board_state[r][c] = ""  # undo invalid mark
-                    continue
-
-                # ✅ Valid move
-                previous = [r[:] for r in board]
-                winner = check_winner(board)
-                if winner:
-                    print(f"🏆 Winner: {winner}")
-                    stop_flag.set()
-                    return
-                if is_draw(board):
-                    print("🤝 It's a draw!")
-                    stop_flag.set()
-                    return
-
-                turn = "robot"  # switch turns
-
-        # --- Robot's turn ---
         if turn == "robot":
-            move = compute_best_move(board, ai_symbol, human_symbol)
-            if move:
-                print(f"[Game] Robot plays at {move}")
-                move_queue.put((ai_symbol, move))
-                with lock:
-                    board_state[move[0]][move[1]] = ai_symbol
+            print("[Robot] Computing best move...")
+            move = compute_best_move(board_state, ai_symbol, human_symbol)
+            if not move:
+                print("It's a draw (no moves left).")
+                break
 
-                winner = check_winner(board_state)
-                if winner:
-                    print(f"🏆 Winner: {winner}")
-                    stop_flag.set()
-                    return
-                if is_draw(board_state):
-                    print("🤝 It's a draw!")
-                    stop_flag.set()
-                    return
+            print(f"[Robot] Drawing {ai_symbol} at {move}")
+            if ai_symbol == "X": draw_x(*move)
+            else: draw_o(*move)
 
+            board_state[move[0]][move[1]] = ai_symbol
+            print_board(board_state)
+
+            if check_winner(board_state):
+                print(f"Robot is the Winner: {ai_symbol}")
+                break
+            if is_draw(board_state):
+                print("It's a draw!")
+                break
+
+            move_to_camera_view()
             turn = "human"
+
+        elif turn == "human":
+            print("[Robot] Waiting for human move...")
+            time.sleep(5)  # allow human to draw
+            detected = get_latest_detection()
+            if detected and validate_human_move(detected, human_symbol):
+                print_board(board_state)
+                if check_winner(board_state):
+                    print(f"Human is the Winner: {human_symbol}")
+                    break
+                if is_draw(board_state):
+                    print("It's a draw!")
+                    break
+                turn = "robot"
+            else:
+                print("[Robot] No valid move detected. Retrying...")
 
         time.sleep(0.5)
 
-    print("[Game] Thread stopped.")
+    print("[Robot] Game over. Returning to safe position.")
+    stop_flag.set()
 
-
-
-# === (Optional) Robot Thread ===
-def robot_loop():
-    from dobot_control import draw_grid, draw_x, draw_o, move_to_camera_view
-    #from dobot_control_sim import draw_grid, draw_x, draw_o
-
-    print("[Robot] Thread started. Drawing grid...")
-    try:
-        draw_grid()
-        print("[Robot] Grid drawn.")
-        move_to
-        grid_drawn_event.set()
-
-    except Exception as e:
-        print("[Robot] Error while drawing grid:", e)
-        grid_drawn_event.set()
-
-    # Now wait for AI moves
-    while not stop_flag.is_set():
-        try:
-            symbol, (r, c) = move_queue.get(timeout=1)
-            print(f"[Robot] Drawing {symbol} at ({r}, {c})")
-
-            if symbol == "O":
-                draw_o(r, c)
-            else:
-                draw_x(r, c)
-
-            move_queue.task_done()
-        except queue.Empty:
-            continue
-        except Exception as e:
-            print("[Robot] Error during drawing:", e)
-
-    print("[Robot] Thread stopped.")
-
-
-
-# === Main Function ===
-def main():
-    print("Starting multithreaded Tic Tac Toe (Stable Vision Edition)")
-    print("Press 'q' to quit.")
-
-    # initialize camera once
-    cap = cv2.VideoCapture(2)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    if not cap.isOpened():
-        raise RuntimeError("Could not open webcam.")
-
-    # Start threads
-    threads = [
-        threading.Thread(target=vision_loop, args=(cap,), daemon=True),
-        threading.Thread(target=game_loop, daemon=True),
-        threading.Thread(target=robot_loop, daemon=True)
-    ]
-    for t in threads: t.start()
-
-    # --- GUI loop (main thread only) ---
-    cv2.namedWindow("Vision", cv2.WINDOW_NORMAL)
-    try:
-        while not stop_flag.is_set():
-            with lock:
-                if last_frame is not None:
-                    cv2.imshow("Vision", last_frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                stop_flag.set()
-                break
-            time.sleep(0.03)
-    except KeyboardInterrupt:
-        stop_flag.set()
-    finally:
-        print("[Main] Stopping...")
-        stop_flag.set()
-        cap.release()
-        cv2.destroyAllWindows()
-        for t in threads:
-            t.join(timeout=1)
-        print("[Main] Clean shutdown complete.")
-
-
+# ===========================================================
+# Main Entry Point
+# ===========================================================
 if __name__ == "__main__":
-    main()
+    print("Starting deterministic Tic Tac Toe (Robot + Vision)...")
+
+    vision_thread = threading.Thread(target=vision_loop, daemon=True)
+    vision_thread.start()
+'''
+    try:
+        robot_game_loop()
+    except KeyboardInterrupt:
+        print("[Main] Interrupted by user.")
+    finally:
+        stop_flag.set()
+        vision_thread.join()
+        print("[Main] Clean shutdown complete.")'''
