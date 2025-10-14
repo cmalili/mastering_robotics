@@ -10,6 +10,7 @@ WORKSPACE = "chris-hub"
 WORKFLOW = "detect-and-classify-3"
 CAMERA_ID = 0                     # webcam ID
 CAMERA_VIEW = (210, -2.26, 61.9)
+API_KEY   = "1HhSNS3VWex8YfHgeGzJ"
 
 # === Globals ===
 board_state = [["" for _ in range(3)] for _ in range(3)]
@@ -60,15 +61,26 @@ def vision_loop():
                     preds = container.get("predictions", container) if isinstance(container, dict) else container
 
             # Confidence filtering
-            preds = [p for p in preds if p.get("confidence", 0) >= 0.85]
+            preds = [p for p in preds if p.get("confidence", 0) >= 0.55]
 
             # Build a new board
             new_board = [["" for _ in range(3)] for _ in range(3)]
             for det in preds:
                 label = det.get("class") or det.get("label")
-                x, y = det.get("x"), det.get("y")
+                x, y, w, h = det.get("x"), det.get("y"), det.get("width", 0), det.get("height", 0)
                 if not label or x is None or y is None:
                     continue
+
+                # Draw boxes
+                start_x = int(x - w / 2)
+                start_y = int(y - h / 2)
+                end_x = int(x + w / 2)
+                end_y = int(y + h / 2)
+                color = (0, 255, 0) if label == "X" else (0, 0, 255)
+                cv2.rectangle(frame, (start_x, start_y), (end_x, end_y), color, 2)
+                cv2.putText(frame, label, (start_x, start_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+
+
                 row = min(max(int((y / frame.shape[0]) * 3), 0), 2)
                 col = min(max(int((x / frame.shape[1]) * 3), 0), 2)
                 new_board[row][col] = label
@@ -76,9 +88,20 @@ def vision_loop():
             with lock:
                 latest_detection = new_board
 
+            
+
         except Exception as e:
             print("[Vision] Error:", e)
             time.sleep(0.5)
+
+        # Display live camera feed
+        cv2.imshow("Tic-Tac-Toe Detection", frame)
+
+        # Allow user to quit with 'q'
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            stop_flag.set()
+            break
+
     cap.release()
     print("[Vision] Thread stopped.")
 
@@ -198,7 +221,7 @@ if __name__ == "__main__":
 
     vision_thread = threading.Thread(target=vision_loop, daemon=True)
     vision_thread.start()
-'''
+
     try:
         robot_game_loop()
     except KeyboardInterrupt:
@@ -206,4 +229,4 @@ if __name__ == "__main__":
     finally:
         stop_flag.set()
         vision_thread.join()
-        print("[Main] Clean shutdown complete.")'''
+        print("[Main] Clean shutdown complete.")
