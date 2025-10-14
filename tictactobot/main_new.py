@@ -93,6 +93,18 @@ def vision_loop():
             print("[Vision] Error:", e)
             time.sleep(0.5)
 
+        # --- Draw grid overlay ---
+        frame = draw_grid_overlay(
+            frame,
+            origin=(20, 280),
+            grid_size=120,
+            translation=(0, 0),
+            scale=1.0
+        )
+
+        cv2.line(frame, (50, 50), (200, 50), (0, 0, 255), 3)
+
+
         # Display live camera feed
         cv2.imshow("Tic-Tac-Toe Detection", frame)
 
@@ -111,6 +123,69 @@ def get_latest_detection():
     global latest_detection
     with lock:
         return [r[:] for r in latest_detection] if latest_detection else None
+
+
+def draw_grid_overlay(
+    frame,
+    origin=(20, 280),
+    grid_size=120,
+    translation=(0, 0),
+    scale=1.0,
+    color=(255, 255, 0),
+    thickness=2,
+    show_info=True,
+):
+    """
+    Draws a 3×3 grid overlay on the given OpenCV frame.
+
+    Parameters
+    ----------
+    frame : np.ndarray
+        The image/frame to draw the grid on.
+    origin : tuple[int, int]
+        Top-left corner of the grid before translation and scaling.
+    grid_size : int
+        Size (in pixels) of each grid cell.
+    translation : tuple[int, int]
+        (dx, dy) pixel offset to shift the grid.
+    scale : float
+        Magnification factor for the grid.
+    color : tuple[int, int, int]
+        BGR color for the grid lines.
+    thickness : int
+        Line thickness in pixels.
+    show_info : bool
+        Whether to display overlay text showing origin/scale info.
+    """
+    ox = origin[0] + translation[0]
+    oy = origin[1] + translation[1]
+    gs = int(grid_size * scale)
+
+    # Draw vertical and horizontal lines
+    for i in range(4):
+        # Vertical lines
+        x = int(ox + i * gs)
+        y1, y2 = int(oy), int(oy + 3 * gs)
+        cv2.line(frame, (x, y1), (x, y2), color, thickness)
+
+        # Horizontal lines
+        y = int(oy + i * gs)
+        x1, x2 = int(ox), int(ox + 3 * gs)
+        cv2.line(frame, (x1, y), (x2, y), color, thickness)
+
+    # Optional info text
+    if show_info:
+        cv2.putText(
+            frame,
+            f"Origin=({ox},{oy}) Scale={scale:.2f}",
+            (ox, oy - 15),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2,
+        )
+
+    return frame
 
 
 import time
