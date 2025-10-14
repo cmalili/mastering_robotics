@@ -1,7 +1,6 @@
-
 import threading, time, queue, json, cv2
 from inference_sdk import InferenceHTTPClient
-from dobot_control_sim import draw_grid, draw_x, draw_o, move_to_camera_view
+from dobot_control_sim import draw_grid, draw_x, draw_o, move_to_camera_view, draw_e
 from game_manager import check_winner, is_draw
 from minimax import compute_best_move
 
@@ -113,33 +112,69 @@ def get_latest_detection():
     with lock:
         return [r[:] for r in latest_detection] if latest_detection else None
 
-def validate_human_move(new_board, human_symbol):
-    """Ensure only one valid human move has been added."""
-    global board_state
-    diff = []
-    for r in range(3):
-        for c in range(3):
-            if board_state[r][c] == "" and new_board[r][c] != "":
-                diff.append((r, c, new_board[r][c]))
 
-    if len(diff) != 1:
-        print("Invalid: multiple or no new marks detected.")
-        return False
-
-    r, c, symbol = diff[0]
-    if symbol != human_symbol:
-        print(f"Invalid: expected '{human_symbol}' but got '{symbol}'.")
-        return False
-
-    board_state[r][c] = human_symbol
-    print(f"[Game] Human move accepted at ({r}, {c}).")
-    return True
+import time
+import sys
 
 def print_board(board):
     print("\nCurrent board:")
     for row in board:
         print(" | ".join(s if s else " " for s in row))
     print("-" * 9)
+
+def validate_human_move(current_board, new_board, human_symbol, robot_symbol):
+    """
+    Compare current_board vs new_board and classify the human action.
+
+    Returns:
+        "valid"    – exactly one correct move detected
+        "multiple" – multiple new marks detected
+        "wrong"    – human used robot's symbol
+        "none"     – no new move detected
+    """
+    diff = []
+    for r in range(3):
+        for c in range(3):
+            if current_board[r][c] == "" and new_board[r][c] != "":
+                diff.append((r, c, new_board[r][c]))
+
+    if len(diff) == 0:
+        return "none"
+    if len(diff) > 1:
+        return "multiple"
+
+    r, c, symbol = diff[0]
+    if symbol == robot_symbol:
+        return "wrong"
+    if symbol == human_symbol:
+        current_board[r][c] = human_symbol
+        return "valid"
+
+    return "none"
+
+
+
+
+def wait_for_human_move(human_symbol, robot_symbol, timeout=30, check_interval=1.0):
+    """
+    Keep checking for a valid move for up to `timeout` seconds.
+    Returns one of: 'valid', 'multiple', 'wrong', 'none'
+    """
+    start = time.time()
+    global board_state, latest_detection
+
+    while time.time() - start < timeout:
+        with lock:
+            detected_board = [row[:] for row in latest_detection]
+
+        result = validate_human_move(board_state, detected_board, human_symbol, robot_symbol)
+        if result != "none":
+            return result  # return immediately on any change
+
+        time.sleep(check_interval)
+
+    return "none"  # timeout
+
 
 # ===========================================================
 # Robot/Game Loop (deterministic)
@@ -149,9 +184,9 @@ def robot_game_loop():
 
     print("[Robot] Starting game.")
     draw_grid()
-    print("[Robot] Grid drawn")
+    print("[Robot] Grid drawn.")
 
-    # Assign default symbols
+    # Assign symbols
     ai_symbol, human_symbol = "X", "O"
 
     # Ask who starts
@@ -161,7 +196,7 @@ def robot_game_loop():
 
     if choice == "human":
         ai_symbol, human_symbol = "O", "X"
-        move_to_camera_view()   # camera ready for human move
+        move_to_camera_view()
     print(f"[Game] Robot='{ai_symbol}', Human='{human_symbol}'")
 
     turn = choice
@@ -171,22 +206,26 @@ def robot_game_loop():
         if turn == "robot":
             print("[Robot] Computing best move...")
             move = compute_best_move(board_state, ai_symbol, human_symbol)
+
             if not move:
-                print("It's a draw (no moves left).")
+                print("[Game] It's a draw (no moves left).")
                 break
 
             print(f"[Robot] Drawing {ai_symbol} at {move}")
-            if ai_symbol == "X": draw_x(*move)
-            else: draw_o(*move)
+            if ai_symbol == "X":
+                draw_x(*move)
+            else:
+                draw_o(*move)
 
             board_state[move[0]][move[1]] = ai_symbol
             print_board(board_state)
 
+            # Check end conditions
             if check_winner(board_state):
                 print(f"Robot is the Winner: {ai_symbol}")
                 break
             if is_draw(board_state):
-                print("It's a draw!")
+                print("[Game] It's a draw!")
                 break
 
             move_to_camera_view()
@@ -194,24 +233,36 @@ def robot_game_loop():
 
         elif turn == "human":
             print("[Robot] Waiting for human move...")
-            time.sleep(5)  # allow human to draw
-            detected = get_latest_detection()
-            if detected and validate_human_move(detected, human_symbol):
+            result = wait_for_human_move(human_symbol, ai_symbol)
+
+            if result == "valid":
                 print_board(board_state)
                 if check_winner(board_state):
-                    print(f"Human is the Winner: {human_symbol}")
+                    print(f"Human wins as '{human_symbol}'!")
                     break
                 if is_draw(board_state):
                     print("It's a draw!")
                     break
                 turn = "robot"
-            else:
-                print("[Robot] No valid move detected. Retrying...")
 
-        time.sleep(0.5)
+            elif result in ("multiple", "wrong"):
+                print(f"[Game] Invalid move ({result}). Robot drawing 'E'.")
+                draw_e()
+                break
+
+            elif result == "none":
+                print("[Game] Human inactive or no move detected. Drawing 'E' and ending game.")
+                draw_e()
+                break
+
+        time.sleep(0.25)
 
     print("[Robot] Game over. Returning to safe position.")
     stop_flag.set()
+
+
+
+
 
 # ===========================================================
 # Main Entry Point

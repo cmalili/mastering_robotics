@@ -20,3 +20,6 @@ def draw_x(row, col):
 def draw_o(row, col):
     print(f"[Sim] Drawing O at ({row}, {col})")
     print(f"[Sim] O drawn at ({row}, {col})")
+
+def draw_e():
+    print("[Sim] Drawing E")
