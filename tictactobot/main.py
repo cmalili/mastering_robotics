@@ -60,7 +60,19 @@ def vision_loop():
                     preds = container.get("predictions", container) if isinstance(container, dict) else container
 
             # Confidence filtering
-            preds = [p for p in preds if p.get("confidence", 0) >= 0.55]
+            preds = [p for p in preds if p.get("confidence", 0) >= 0.35]
+
+            # Define grid parameters (same as overlay)
+            origin = (270, 40)
+            grid_size = 120
+            translation = (0, 0)
+            scale = 1.0
+
+            ox = origin[0] + translation[0]
+            oy = origin[1] + translation[1]
+            gs = int(grid_size * scale)
+            grid_xmin, grid_ymin = ox, oy
+            grid_xmax, grid_ymax = ox + 3 * gs, oy + 3 * gs
 
             # Build a new board
             new_board = [["" for _ in range(3)] for _ in range(3)]
@@ -79,11 +91,31 @@ def vision_loop():
                 cv2.rectangle(frame, (start_x, start_y), (end_x, end_y), color, 2)
                 cv2.putText(frame, label, (start_x, start_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
-                #cv2.line(frame, (50, 50), (200, 50), (0, 0, 255), 3)
+                # --- Filter out detections outside grid region ---
+                if not (grid_xmin <= x <= grid_xmax and grid_ymin <= y <= grid_ymax):
+                    continue
 
-                row = min(max(int((y / frame.shape[0]) * 3), 0), 2)
-                col = min(max(int((x / frame.shape[1]) * 3), 0), 2)
+                # --- Map detection to (row, col) ---
+                col = int((x - grid_xmin) // gs)
+                row = int((y - grid_ymin) // gs)
+                row = min(max(row, 0), 2)
+                col = min(max(col, 0), 2)
+
+                # --- Update logical board ---
                 new_board[row][col] = label
+
+                # --- Draw debug cell box ---
+                cell_x1 = int(grid_xmin + col * gs)
+                cell_y1 = int(grid_ymin + row * gs)
+                cell_x2 = cell_x1 + gs
+                cell_y2 = cell_y1 + gs
+                cv2.rectangle(frame, (cell_x1, cell_y1), (cell_x2, cell_y2), (0, 255, 255), 2)
+                cv2.putText(frame, f"{label}@({row},{col})", (cell_x1 + 5, cell_y1 + 20),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+
+                #row = min(max(int((y / frame.shape[0]) * 3), 0), 2)
+                #col = min(max(int((x / frame.shape[1]) * 3), 0), 2)
+                #new_board[row][col] = label
 
             with lock:
                 latest_detection = new_board
