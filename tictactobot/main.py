@@ -79,6 +79,7 @@ def vision_loop():
                 cv2.rectangle(frame, (start_x, start_y), (end_x, end_y), color, 2)
                 cv2.putText(frame, label, (start_x, start_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
+                #cv2.line(frame, (50, 50), (200, 50), (0, 0, 255), 3)
 
                 row = min(max(int((y / frame.shape[0]) * 3), 0), 2)
                 col = min(max(int((x / frame.shape[1]) * 3), 0), 2)
@@ -96,14 +97,11 @@ def vision_loop():
         # --- Draw grid overlay ---
         frame = draw_grid_overlay(
             frame,
-            origin=(20, 280),
+            #origin=(20, 280),
             grid_size=120,
             translation=(0, 0),
             scale=1.0
         )
-
-        cv2.line(frame, (50, 50), (200, 50), (0, 0, 255), 3)
-
 
         # Display live camera feed
         cv2.imshow("Tic-Tac-Toe Detection", frame)
@@ -127,7 +125,7 @@ def get_latest_detection():
 
 def draw_grid_overlay(
     frame,
-    origin=(20, 280),
+    origin=(270, 40),
     grid_size=120,
     translation=(0, 0),
     scale=1.0,
