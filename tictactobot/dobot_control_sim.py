@@ -27,3 +27,6 @@ def draw_E():
 def draw_D(segments = 24):
     print(f"Drawing D")
     print(f"D drawn)")
+
+def draw_win():
+    print("Drawing a diagonal line across grid")

@@ -1,6 +1,6 @@
 import threading, time, queue, json, cv2
 from inference_sdk import InferenceHTTPClient
-from dobot_control_sim import draw_grid, draw_x, draw_o, move_to_camera_view, draw_e
+from dobot_control_sim import draw_grid, draw_x, draw_o, move_to_camera_view, draw_E, draw_D, draw_win
 from game_manager import check_winner, is_draw
 from minimax import compute_best_move
 
@@ -294,17 +294,8 @@ def robot_game_loop():
     # Assign symbols
     ai_symbol, human_symbol = "X", "O"
 
-    # Ask who starts
-    choice = ""
-    while choice.lower() not in ["robot", "human"]:
-        choice = input("Who first: Robot or Human? ").strip().lower()
-
-    if choice == "human":
-        ai_symbol, human_symbol = "O", "X"
-        move_to_camera_view()
-    print(f"[Game] Robot='{ai_symbol}', Human='{human_symbol}'")
-
-    turn = choice
+    # Robot goes first
+    turn = "robot"
 
     # --- Main game loop ---
     while not stop_flag.is_set():
@@ -314,6 +305,7 @@ def robot_game_loop():
 
             if not move:
                 print("[Game] It's a draw (no moves left).")
+                draw_D()
                 break
 
             print(f"[Robot] Drawing {ai_symbol} at {move}")
@@ -328,9 +320,12 @@ def robot_game_loop():
             # Check end conditions
             if check_winner(board_state):
                 print(f"Robot is the Winner: {ai_symbol}")
+                draw_win()
+                #move_to_camera_view()
                 break
             if is_draw(board_state):
                 print("[Game] It's a draw!")
+                draw_D()
                 break
 
             move_to_camera_view()
@@ -347,26 +342,19 @@ def robot_game_loop():
                     break
                 if is_draw(board_state):
                     print("It's a draw!")
+                    draw_D()
                     break
                 turn = "robot"
-
-            elif result in ("multiple", "wrong"):
-                print(f"[Game] Invalid move ({result}). Robot drawing 'E'.")
-                draw_e()
-                break
-
+            
             elif result == "none":
-                print("[Game] Human inactive or no move detected. Drawing 'E' and ending game.")
-                draw_e()
+                print("[Game] Human inactive. Ending game.")
                 break
 
         time.sleep(0.25)
 
     print("[Robot] Game over. Returning to safe position.")
+    move_to_camera_view()
     stop_flag.set()
-
-
-
 
 
 # ===========================================================
