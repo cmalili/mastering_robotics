@@ -272,3 +272,51 @@ def draw_E():
 
     print("E drawn ✅")
 
+
+def check_winner(board):
+    """
+    Checks if there's a winner on the Tic-Tac-Toe board.
+    Returns (winner_symbol, winning_cells) or (None, None).
+    """
+    # Rows and columns
+    for i in range(3):
+        # Row
+        if board[i][0] != "" and board[i][0] == board[i][1] == board[i][2]:
+            return board[i][0], [(i, 0), (i, 1), (i, 2)]
+        # Column
+        if board[0][i] != "" and board[0][i] == board[1][i] == board[2][i]:
+            return board[0][i], [(0, i), (1, i), (2, i)]
+
+    # Diagonals
+    if board[0][0] != "" and board[0][0] == board[1][1] == board[2][2]:
+        return board[0][0], [(0, 0), (1, 1), (2, 2)]
+    if board[0][2] != "" and board[0][2] == board[1][1] == board[2][0]:
+        return board[0][2], [(0, 2), (1, 1), (2, 0)]
+
+    # No winner yet
+    return None, None
+
+
+def draw_win(cells, overshoot=5):
+    """
+    Draws a line across the winning triple of cells.
+    """
+    import numpy as np
+    print(f"[Robot] Drawing win line across {cells}")
+
+    coords = [np.array(move_to_cell_center(r + 1, c + 1)) for (r, c) in cells]
+    start, end = coords[0], coords[-1]
+
+    # Extend line a little for a clean visual
+    direction = (end - start)
+    direction = direction / np.linalg.norm(direction)
+    start -= direction * overshoot
+    end += direction * overshoot
+
+    x1, y1 = start
+    x2, y2 = end
+
+    draw_line(x1, y1, x2, y2, Z_DRAW)
+    print("[Robot] Win line drawn ✅")
+
+
