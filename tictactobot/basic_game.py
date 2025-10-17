@@ -5,11 +5,11 @@ from game_manager import check_winner, is_draw
 from minimax import compute_best_move
 
 # === Configuration ===
-WORKSPACE = "chris-hub"
-WORKFLOW = "detect-and-classify-3"
+WORKSPACE = "chrisbench"
+WORKFLOW = "detect-and-classify-2"
 CAMERA_ID = 0                     # webcam ID
 CAMERA_VIEW = (210, -2.26, 61.9)
-API_KEY   = "1HhSNS3VWex8YfHgeGzJ"
+API_KEY   = "WoJSGAUeJ7yrujtftLdj"
 
 # === Globals ===
 board_state = [["" for _ in range(3)] for _ in range(3)]
