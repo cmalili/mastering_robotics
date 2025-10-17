@@ -1,15 +1,16 @@
 import threading, time, queue, json, cv2
 from inference_sdk import InferenceHTTPClient
-from dobot_control_sim import draw_grid, draw_x, draw_o, move_to_camera_view, draw_e
+from dobot_control_sim import draw_grid, draw_x, draw_o, move_to_camera_view, draw_E, draw_D, draw_win, draw_H, draw_R
+# from dobot_control draw_winners, check_winners
 from game_manager import check_winner, is_draw
 from minimax import compute_best_move
 
 # === Configuration ===
-WORKSPACE = "chris-hub"
-WORKFLOW = "detect-and-classify-3"
+WORKSPACE = "chrisbench"
+WORKFLOW = "detect-and-classify-2"
 CAMERA_ID = 0                     # webcam ID
 CAMERA_VIEW = (210, -2.26, 61.9)
-API_KEY   = "1HhSNS3VWex8YfHgeGzJ"
+API_KEY   = "WoJSGAUeJ7yrujtftLdj"
 
 # === Globals ===
 board_state = [["" for _ in range(3)] for _ in range(3)]
@@ -301,7 +302,11 @@ def robot_game_loop():
 
     if choice == "human":
         ai_symbol, human_symbol = "O", "X"
+        draw_H()                 # draw the letter H to indicate human plays first
         move_to_camera_view()
+    else:
+        draw_R()                # draw the letter R to indicate robot plays first
+
     print(f"[Game] Robot='{ai_symbol}', Human='{human_symbol}'")
 
     turn = choice
@@ -314,6 +319,7 @@ def robot_game_loop():
 
             if not move:
                 print("[Game] It's a draw (no moves left).")
+                draw_D()
                 break
 
             print(f"[Robot] Drawing {ai_symbol} at {move}")
@@ -328,9 +334,14 @@ def robot_game_loop():
             # Check end conditions
             if check_winner(board_state):
                 print(f"Robot is the Winner: {ai_symbol}")
+                draw_win()
+
+                # _, cells = get_winning_triple(board_state)
+                # draw_winners(cells)
                 break
             if is_draw(board_state):
                 print("[Game] It's a draw!")
+                draw_D()
                 break
 
             move_to_camera_view()
@@ -344,20 +355,23 @@ def robot_game_loop():
                 print_board(board_state)
                 if check_winner(board_state):
                     print(f"Human wins as '{human_symbol}'!")
+                    # _, cells = get_winning_triple(board_state)
+                    # draw_winners(cells)
                     break
                 if is_draw(board_state):
                     print("It's a draw!")
+                    draw_D()
                     break
                 turn = "robot"
 
             elif result in ("multiple", "wrong"):
                 print(f"[Game] Invalid move ({result}). Robot drawing 'E'.")
-                draw_e()
+                draw_E()
                 break
 
             elif result == "none":
                 print("[Game] Human inactive or no move detected. Drawing 'E' and ending game.")
-                draw_e()
+                #draw_e()
                 break
 
         time.sleep(0.25)
