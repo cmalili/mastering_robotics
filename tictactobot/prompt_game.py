@@ -121,8 +121,6 @@ def vision_loop():
             with lock:
                 latest_detection = new_board
 
-            
-
         except Exception as e:
             print("[Vision] Error:", e)
             time.sleep(0.5)
@@ -295,8 +293,17 @@ def robot_game_loop():
     # Assign symbols
     ai_symbol, human_symbol = "X", "O"
 
-    # Robot goes first
-    turn = "robot"
+    # Ask who starts
+    choice = ""
+    while choice.lower() not in ["robot", "human"]:
+        choice = input("Who first: Robot or Human? ").strip().lower()
+
+    if choice == "human":
+        ai_symbol, human_symbol = "O", "X"
+        move_to_camera_view()
+    print(f"[Game] Robot='{ai_symbol}', Human='{human_symbol}'")
+
+    turn = choice
 
     # --- Main game loop ---
     while not stop_flag.is_set():
@@ -322,14 +329,13 @@ def robot_game_loop():
             if check_winner(board_state):
                 print(f"Robot is the Winner: {ai_symbol}")
                 draw_win()
-                #move_to_camera_view()
 
                 # _, cells = get_winning_triple(board_state)
                 # draw_winners(cells)
                 break
             if is_draw(board_state):
                 print("[Game] It's a draw!")
-                draw_D()
+                draw_D
                 break
 
             move_to_camera_view()
@@ -349,16 +355,19 @@ def robot_game_loop():
                     draw_D()
                     break
                 turn = "robot"
-            
+
             elif result == "none":
                 print("[Game] Human inactive. Ending game.")
+                #draw_e()
                 break
 
         time.sleep(0.25)
 
     print("[Robot] Game over. Returning to safe position.")
-    move_to_camera_view()
     stop_flag.set()
+
+
+
 
 
 # ===========================================================

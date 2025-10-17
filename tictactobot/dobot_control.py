@@ -273,7 +273,7 @@ def draw_E():
     print("E drawn ✅")
 
 
-def check_winner(board):
+def check_winners(board):
     """
     Checks if there's a winner on the Tic-Tac-Toe board.
     Returns (winner_symbol, winning_cells) or (None, None).
@@ -297,7 +297,7 @@ def check_winner(board):
     return None, None
 
 
-def draw_win(cells, overshoot=5):
+def draw_winners(cells, overshoot=5):
     """
     Draws a line across the winning triple of cells.
     """
