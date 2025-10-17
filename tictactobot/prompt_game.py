@@ -1,6 +1,6 @@
 import threading, time, queue, json, cv2
 from inference_sdk import InferenceHTTPClient
-from dobot_control_sim import draw_grid, draw_x, draw_o, move_to_camera_view, draw_E, draw_D, draw_win
+from dobot_control_sim import draw_grid, draw_x, draw_o, move_to_camera_view, draw_E, draw_D, draw_win, draw_H, draw_R
 # from dobot_control draw_winners, check_winners
 from game_manager import check_winner, is_draw
 from minimax import compute_best_move
@@ -300,7 +300,11 @@ def robot_game_loop():
 
     if choice == "human":
         ai_symbol, human_symbol = "O", "X"
+        draw_H()                 # draw the letter H to indicate human plays first
         move_to_camera_view()
+    else:
+        draw_R()                # draw the letter R to indicate robot plays first
+
     print(f"[Game] Robot='{ai_symbol}', Human='{human_symbol}'")
 
     turn = choice
@@ -349,6 +353,8 @@ def robot_game_loop():
                 print_board(board_state)
                 if check_winner(board_state):
                     print(f"Human wins as '{human_symbol}'!")
+                    # _, cells = get_winning_triple(board_state)
+                    # draw_winners(cells)
                     break
                 if is_draw(board_state):
                     print("It's a draw!")

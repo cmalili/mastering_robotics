@@ -28,5 +28,15 @@ def draw_D(segments = 24):
     print(f"Drawing D")
     print(f"D drawn)")
 
+def draw_H():
+    print(f"Drawing H")
+    print(f"H drawn)")
+
+def draw_R(segments = 24):
+    print(f"Drawing R")
+    print(f"R drawn)")
+
+
+
 def draw_win():
     print("Drawing a diagonal line across grid")

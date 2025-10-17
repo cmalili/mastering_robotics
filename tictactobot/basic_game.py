@@ -343,6 +343,8 @@ def robot_game_loop():
                 print_board(board_state)
                 if check_winner(board_state):
                     print(f"Human wins as '{human_symbol}'!")
+                    # _, cells = get_winning_triple(board_state)
+                    # draw_winners(cells)
                     break
                 if is_draw(board_state):
                     print("It's a draw!")
