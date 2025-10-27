@@ -2,3 +2,5 @@ autogen-agentchat>=0.2.36
 autogen-ext[openai]>=0.2.36
 dotenv
 opencv-python
+networkx
+scikit-image
