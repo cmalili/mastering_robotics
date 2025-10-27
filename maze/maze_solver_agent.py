@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated, Literal, Optional, TypedDict, List
 from types import SimpleNamespace
 
-from d import solve_centerline  # <- your solver module
+from centerline_pixel import solve_centerline  # <- your solver module
 
 class MazeResult(TypedDict, total=False):
     status: str

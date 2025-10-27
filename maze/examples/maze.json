@@ -1,0 +1,34 @@
+{
+  "grid_size": {"rows": 4, "cols": 4},
+  "entrance": {"cell": [0, 1], "side": "top"},
+  "exit": {"cell": [3, 2], "side": "bottom"},
+  "path_cells": [[0,1],[0,0],[1,0],[1,1],[1,2],[2,2],[2,3],[3,3],[3,2]],
+  "moves": "L,D,R,R,D,R,D,L",
+  "confidence": 0.95,
+  "cells": [
+    [
+      {"N":false,"E":true, "S":true,  "W":false},
+      {"N":true, "E":false,"S":false, "W":true },  
+      {"N":false,"E":false,"S":false, "W":false},
+      {"N":false,"E":false,"S":false, "W":false}
+    ],
+    [
+      {"N":true, "E":true, "S":false, "W":false},
+      {"N":false,"E":true, "S":false, "W":true },
+      {"N":false,"E":false,"S":true,  "W":true },
+      {"N":false,"E":false,"S":false, "W":false}
+    ],
+    [
+      {"N":false,"E":false,"S":false, "W":false},
+      {"N":false,"E":false,"S":false, "W":false},
+      {"N":true, "E":true, "S":false, "W":false},   
+      {"N":false,"E":false,"S":true,  "W":true }
+    ],
+    [
+      {"N":false,"E":false,"S":true,  "W":false},
+      {"N":false,"E":false,"S":true,  "W":false},
+      {"N":false,"E":true, "S":true,  "W":false},   
+      {"N":true, "E":false,"S":true,  "W":true }
+    ]
+  ]
+}

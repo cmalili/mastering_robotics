@@ -21,3 +21,7 @@ autogen_crash_course/.env
 *.mp4
 *.mov
 __pycache__/
+# binary/media we don't track
+*.png
+*.jpg
+*.jpeg
