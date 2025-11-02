@@ -28,6 +28,7 @@ python calibrate_swarm.py \
 from __future__ import annotations
 import os, argparse, json
 from typing import Optional
+import asyncio
 
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import TextMessage, HandoffMessage
@@ -35,12 +36,17 @@ from autogen_agentchat.teams import Swarm
 from autogen_agentchat.conditions import HandoffTermination, MaxMessageTermination
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
+from dotenv import load_dotenv
+
 # Our deterministic tools:
 from calib_tools import (
     capture_reference_image, use_existing_reference_image,
     detect_reference_corners, load_correspondences,
     fit_homography_pixels_to_robot, verify_homography_on_reference
 )
+
+
+load_dotenv()
 
 SYSTEM_CORNER = """You are CornerAgent.
 - Your ONLY job is to obtain a reference image and detect its four outer corners.
@@ -72,9 +78,12 @@ SYSTEM_VERIFY = """You are VerifyAgent.
 - Then HANDOFF to "user" to finish the team.
 """
 
+api_key = os.environ.get("OPENAI_API_KEY")
+
 def build_model(model_name: Optional[str]):
     return OpenAIChatCompletionClient(
-        model=model_name or os.environ.get("OPENAI_MODEL", "gpt-4o"),
+        model="gpt-4o",
+        api_key=api_key,
         parallel_tool_calls=False,   # IMPORTANT for team/tool stability
     )
 
@@ -120,14 +129,11 @@ def build_team(save_prefix: str, *, model_name: Optional[str]=None):
 
     team = Swarm(
         participants=[corner_agent, corr_agent, fit_agent, verify_agent],
-        termination=[
-            HandoffTermination(target="user"),     # stop when VerifyAgent hands off to user
-            MaxMessageTermination(max_messages=16)
-        ],
+        termination_condition=HandoffTermination(target="user") | MaxMessageTermination(max_messages=16)
     )
     return team
 
-def main():
+async def main():
     ap = argparse.ArgumentParser()
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--ref-image", type=str, help="Use an existing reference image at this path.")
@@ -166,7 +172,7 @@ def main():
         )
 
     # Run Swarm from CornerAgent
-    result = team.run(task=TextMessage(content=seed, source="user"))
+    result = await team.run(task=TextMessage(content=seed, source="user"))
 
     # If correspondences were not provided, CorrespondenceAgent should have handed off to user.
     # If you DID provide --corresp, continue by resuming the team with a HandoffMessage to CorrespondenceAgent
@@ -185,10 +191,10 @@ def main():
             source="user",
             target="CorrespondenceAgent",
         )
-        result = team.run(task=resume_msg)
+        result = await team.run(task=resume_msg)
 
     # Print the last assistant content (should include the JSON summary)
     print(result.messages[-1].content)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -1,4 +1,4 @@
-#!/home/cmalili/mastering_robotics/maze/autogen_maze/bin/python3
+#!/home/cmalili/mastering_robotics/maze/autogen_maze/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
