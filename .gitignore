@@ -25,3 +25,12 @@ __pycache__/
 *.png
 *.jpg
 *.jpeg
+# build / cache / env
+__pycache__/
+*.pyc
+maze/__pycache__/
+maze/autogen_maze/bin/
+# media we don't want tracked
+*.png
+*.jpg
+*.jpeg

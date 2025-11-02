@@ -25,35 +25,10 @@ import numpy as np
 import cv2
 from pathlib import Path
 
-
-def draw_points(img, pts, color=(0,0,255), radius=3):
-    for (x, y) in pts.astype(int):
-        cv2.circle(img, (x, y), radius, color, -1, lineType=cv2.LINE_AA)
-
-def shi_tomasi(gray, max_corners=1000, quality=0.2, min_dist=500, block_size=9, subpix=False):
-    """Shi–Tomasi Good Features to Track."""
-    corners = cv2.goodFeaturesToTrack(
-        gray, maxCorners=max_corners, qualityLevel=quality, minDistance=min_dist,
-        blockSize=block_size, useHarrisDetector=False, k=0.04
-    )
-    if corners is None:
-        return np.empty((0,2), np.float32)
-    pts = corners.reshape(-1, 2).astype(np.float32)
-
-    if subpix and len(pts) > 0:
-        # Subpixel refinement (optional)
-        term = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 40, 0.01)
-        pts_ref = cv2.cornerSubPix(gray, pts.reshape(-1,1,2), (7,7), (-1,-1), term)
-        pts = pts_ref.reshape(-1,2).astype(np.float32)
-    return pts
+# ---- import your working Shi–Tomasi detector ----
+from detect_corners_classical import shi_tomasi  # same directory
 
 # ---------------------- small helpers ----------------------
-
-def save_json(data, path):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
 
 def _polygon_area2(poly: np.ndarray) -> float:
     """Twice the signed area; >0 for CCW in standard coords (y up).
@@ -136,15 +111,15 @@ def _max_area_quad_from_hull(H: np.ndarray):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--image", type=str, default="data/images/maze.jpg")
-    ap.add_argument("--overlay", type=str, default="data/images/maze_overlay.png", help="Save visualization PNG.")
-
-    ap.add_argument("--corners-json", type=str, default="data/calibration/maze_corners.json", help="Save TL,TR,BR,BL to .json")
+    ap.add_argument("image", type=str)
+    ap.add_argument("--points-npy", type=str, default=None, help="Optional Nx2 float points; if provided, skip detection.")
+    ap.add_argument("--overlay", type=str, default=None, help="Save visualization PNG.")
+    ap.add_argument("--corners-npy", type=str, default=None, help="Save TL,TR,BR,BL to .npy")
 
     # Detection params (used only if --points-npy is not given)
     ap.add_argument("--max-corners", type=int, default=1500)
-    ap.add_argument("--quality", type=float, default=0.2)
-    ap.add_argument("--min-dist", type=float, default=500)
+    ap.add_argument("--quality", type=float, default=0.11)
+    ap.add_argument("--min-dist", type=float, default=400)
     ap.add_argument("--block-size", type=int, default=9)
     ap.add_argument("--subpix", action="store_true")
 
@@ -156,13 +131,18 @@ def main():
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray_blur = cv2.GaussianBlur(gray, (3,3), 0)
 
-   
-    P = shi_tomasi(gray_blur,
-                   max_corners=args.max_corners,
-                   quality=args.quality,
-                   min_dist=args.min_dist,
-                   block_size=args.block_size,
-                   subpix=args.subpix)
+    # 1) points: load or detect
+    if args.points_npy:
+        P = np.load(args.points_npy).astype(np.float32)
+        if P.ndim != 2 or P.shape[1] != 2:
+            raise SystemExit(f"{args.points_npy} should be Nx2 float array")
+    else:
+        P = shi_tomasi(gray_blur,
+                       max_corners=args.max_corners,
+                       quality=args.quality,
+                       min_dist=args.min_dist,
+                       block_size=args.block_size,
+                       subpix=args.subpix)
 
     if P.shape[0] < 4:
         print(json.dumps({"status":"error","reason":"<4 detected points"}, indent=2))
@@ -209,7 +189,10 @@ def main():
         cv2.circle(vis, (x,y), 7, (0,0,255), -1)
         cv2.putText(vis, lab, (x+6,y-6), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,255), 2)
     cv2.imwrite(overlay_path, vis)
-    
+
+    # 6) save npy if requested
+    if args.corners_npy:
+        np.save(args.corners_npy, ordered.astype(np.float32))
 
     # 7) report
     print(json.dumps({
@@ -219,16 +202,6 @@ def main():
         "outer_corners_TL_TR_BR_BL": ordered.round(2).tolist(),
         "overlay": overlay_path
     }, indent=2))
-
-    image_corners = ordered.round(2).tolist()
-    the_corners = {
-        "TL": image_corners[0], 
-        "TR": image_corners[1], 
-        "BR": image_corners[2], 
-        "BL": image_corners[3]
-    }
-
-    save_json(the_corners, args.corners_json)      
 
 if __name__ == "__main__":
     main()
