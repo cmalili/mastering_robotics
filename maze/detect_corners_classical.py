@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
 """
 detect_corners_classical.py
-Minimal corner detection with classic methods (Shi–Tomasi / Harris / FAST).
+Minimal corner detection with classic methods (Shi–Tomasi).
 
 Examples
 --------
 # Shi–Tomasi (recommended default)
 python detect_corners_classical.py the_maze.jpg --method shi --max-corners 1500 --quality 0.01 --min-dist 6 --subpix
-
-# Harris
-python detect_corners_classical.py the_maze.jpg --method harris --harris-block 3 --harris-ksize 3 --harris-k 0.04 --thresh 0.01
-
-# FAST (very fast, often finds many)
-python detect_corners_classical.py the_maze.jpg --method fast --fast-thresh 15
 """
+
 
 import argparse, json
 import numpy as np
@@ -41,17 +36,17 @@ def shi_tomasi(gray, max_corners=1000, quality=0.01, min_dist=5, block_size=9, s
         pts = pts_ref.reshape(-1,2).astype(np.float32)
     return pts
 
-
+"""
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("image", type=str, help="Path to input image.")
-    ap.add_argument("--out", type=str, default=None, help="Overlay output path (default: input_stem+'_corners.png').")
+    ap.add_argument("--image", type=str, default="data/images/maze.jpg", help="Path to input image.")
+    ap.add_argument("--out", type=str, default="data/images/maze_detected_corners.jpg", help="Overlay output path (default: input_stem+'_corners.png').")
 
     # Shi–Tomasi params
     ap.add_argument("--max-corners", type=int, default=15)
-    ap.add_argument("--quality", type=float, default=0.11)
-    ap.add_argument("--min-dist", type=float, default=5)
-    ap.add_argument("--block-size", type=int, default=3)
+    ap.add_argument("--quality", type=float, default=0.2)
+    ap.add_argument("--min-dist", type=float, default=500)
+    ap.add_argument("--block-size", type=int, default=9)
     ap.add_argument("--subpix", action="store_true", help="Enable subpixel refinement for shi/harris.")
 
     args = ap.parse_args()
@@ -74,7 +69,7 @@ def main():
     overlay = img.copy()
     draw_points(overlay, pts, color=(0,0,255), radius=10)
 
-    out_path = args.out or (Path(args.image).with_suffix("").as_posix() + f"_corners.png")
+    out_path = args.out
     cv2.imwrite(out_path, overlay)
 
     # Print a compact JSON summary (first 50 corners)
@@ -88,3 +83,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+"""
