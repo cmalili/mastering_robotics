@@ -165,66 +165,7 @@ def downscaled_px_from_request(
     return 0  # “no minimum”
 
 
-# ---------- Core solvers ----------
-def bfs_mask(cm: np.ndarray, start: Tuple[int,int], goal: Tuple[int,int]) -> List[Tuple[int,int]]:
-    """Shortest path on a 0/1 mask (4-neighbour)."""
-    H, W = cm.shape
-    prev = -np.ones((H, W, 2), dtype=np.int32)
-    q = deque([start]); seen = np.zeros((H, W), np.uint8); seen[start] = 1
-    dirs = [(-1,0),(1,0),(0,-1),(0,1)]
-    while q:
-        y, x = q.popleft()
-        if (y, x) == goal: break
-        for dy, dx in dirs:
-            ny, nx = y+dy, x+dx
-            if 0 <= ny < H and 0 <= nx < W and cm[ny, nx] and not seen[ny, nx]:
-                seen[ny, nx] = 1; prev[ny, nx] = (y, x); q.append((ny, nx))
-    path = []
-    if prev[goal][0] != -1 or goal == start:
-        cur = goal
-        while True:
-            path.append(cur)
-            if cur == start: break
-            y, x = cur; py, px = prev[y, x]; cur = (int(py), int(px))
-        path.reverse()
-    return path
-
-def widest_path(dist: np.ndarray, start: Tuple[int,int], goal: Tuple[int,int], include_gate: bool=False) -> Tuple[float, List[Tuple[int,int]]]:
-    """Max–min clearance route on 4-neighbour grid."""
-    H, W = dist.shape
-    d = dist.copy()
-    if not include_gate:
-        big = float(dist.max() + 1.0)
-        d[start] = big; d[goal] = big
-    cap = np.full((H, W), -np.inf, dtype=float)
-    parent_y = -np.ones((H, W), dtype=np.int32); parent_x = -np.ones((H, W), dtype=np.int32)
-    cap[start] = d[start]
-    heap = [(-cap[start], start)]
-    visited = np.zeros((H, W), np.uint8)
-    dirs = [(-1,0),(1,0),(0,-1),(0,1)]
-    import math
-    while heap:
-        negc, (y, x) = heapq.heappop(heap)
-        if visited[y, x]: continue
-        visited[y, x] = 1
-        if (y, x) == goal: break
-        for dy, dx in dirs:
-            ny, nx = y+dy, x+dx
-            if ny < 0 or ny >= H or nx < 0 or nx >= W: continue
-            if dist[ny, nx] <= 0: continue
-            cand = min(cap[y, x], d[ny, nx])
-            if cand > cap[ny, nx]:
-                cap[ny, nx] = cand
-                parent_y[ny, nx] = y; parent_x[ny, nx] = x
-                heapq.heappush(heap, (-cand, (ny, nx)))
-    if cap[goal] <= 0 or parent_y[goal] == -1:
-        return 0.0, []
-    path=[]; gy,gx=goal
-    while not (gy==start[0] and gx==start[1]):
-        path.append((gy,gx)); py,px=parent_y[gy,gx],parent_x[gy,gx]; gy,gx=int(py),int(px)
-    path.append(start); path.reverse()
-    return float(cap[goal]), path
-
+# ---------- Core solver ----------
 def dijkstra_weighted(dist: np.ndarray, start: Tuple[int,int], goal: Tuple[int,int], lam: float=5.0, eps: float=1.0) -> Tuple[List[Tuple[int,int]], float, float]:
     """
     Shortest path with per-pixel cost:
@@ -321,78 +262,19 @@ def solve_centerline(image_path: str, args) -> Dict:
 
     # Convert requested min-clearance to downscaled px (0 means no minimum)
     roi_width_orig_px = int(round((x1 - x0) / max(scale, 1e-6)))
-    if args.mode == "shortest":
-        min_clear_eff = downscaled_px_from_request(
-            scale,
-            px_original=None if args.clearance_ref=="downscaled" else args.min_clearance,
-            px_downscaled=args.min_clearance if args.clearance_ref=="downscaled" else None,
-            mm=args.min_clearance_mm, maze_width_mm=args.maze_width_mm, roi_width_orig_px=roi_width_orig_px
-        )
-        if min_clear_eff <= 0:
-            return {"status":"error","reason":"--min-clearance is required for mode=shortest"}
-        safe = (dist >= min_clear_eff).astype(np.uint8)
-        safe[0,:]=0; safe[-1,:]=0; safe[:,0]=0; safe[:,-1]=0
-        safe[start] = 1; safe[goal] = 1
-        path = bfs_mask(safe, start, goal)
-        if not path:
-            base = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-            dbg_img = draw_safe_and_path_on_canvas(base.copy(), safe, [], (y0,y1,x0,x1))
-            dbg_img = cv2.resize(dbg_img, (W0, H0), interpolation=cv2.INTER_NEAREST)
-            out_dbg = os.path.splitext(image_path)[0] + "_safe_region_infeasible.png"
-            cv2.imwrite(out_dbg, dbg_img)
-            return {
-                "status":"error",
-                "reason":"Requested minimum clearance is infeasible.",
-                "min_clearance_downscaled_px": int(min_clear_eff),
-                "min_clearance_equiv_original_px": float(min_clear_eff / max(scale,1e-6)),
-                "debug_overlay": os.path.basename(out_dbg)
-            }
-        used_T = min_clear_eff
-        achieved_min = float(min(dist[y,x] for (y,x) in path))
-    elif args.mode == "widest":
-        include_gate = bool(args.include_gate)
-        achieved_min, path = widest_path(dist, start, goal, include_gate=include_gate)
-        if not path:
-            return {"status":"error","reason":"No path through corridor (check binarization)."}
-        # Optional user minimum
-        min_clear_eff = downscaled_px_from_request(
-            scale,
-            px_original=None if args.clearance_ref=="downscaled" else args.min_clearance,
-            px_downscaled=args.min_clearance if args.clearance_ref=="downscaled" else None,
-            mm=args.min_clearance_mm, maze_width_mm=args.maze_width_mm, roi_width_orig_px=roi_width_orig_px
-        )
-        if min_clear_eff > 0 and achieved_min < min_clear_eff:
-            base = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-            safe = (dist >= min_clear_eff).astype(np.uint8)
-            safe[0,:]=0; safe[-1,:]=0; safe[:,0]=0; safe[:,-1]=0
-            dbg_img = draw_safe_and_path_on_canvas(base.copy(), safe, [], (y0,y1,x0,x1))
-            dbg_img = cv2.resize(dbg_img, (W0, H0), interpolation=cv2.INTER_NEAREST)
-            out_dbg = os.path.splitext(image_path)[0] + "_safe_region_infeasible.png"
-            cv2.imwrite(out_dbg, dbg_img)
-            return {
-                "status":"error",
-                "reason":"Requested minimum clearance is infeasible.",
-                "min_clearance_downscaled_px": int(min_clear_eff),
-                "min_clearance_equiv_original_px": float(min_clear_eff / max(scale,1e-6)),
-                "max_achievable_downscaled_px": float(achieved_min),
-                "max_achievable_equiv_original_px": float(achieved_min / max(scale,1e-6)),
-                "debug_overlay": os.path.basename(out_dbg)
-            }
-        # For overlay, threshold at T=floor(achieved_min)
-        used_T = int(np.floor(achieved_min))
-        safe = (dist >= max(1, used_T)).astype(np.uint8)
-        safe[0,:]=0; safe[-1,:]=0; safe[:,0]=0; safe[:,-1]=0
-    elif args.mode == "weighted":
-        lam = float(args.lam); eps = float(args.eps)
-        path, achieved_min, achieved_avg = dijkstra_weighted(dist, start, goal, lam=lam, eps=eps)
-        if not path:
-            return {"status":"error","reason":"No path through corridor (check binarization)."}
-        # Overlay: threshold at T = max(1, floor(achieved_min))
-        used_T = int(np.floor(achieved_min))
-        safe = (dist >= max(1, used_T)).astype(np.uint8)
-        safe[0,:]=0; safe[-1,:]=0; safe[:,0]=0; safe[:,-1]=0
-    else:
-        return {"status":"error","reason":"Unknown mode"}
+    
+
+   
+    lam = float(args.lam); eps = float(args.eps)
+    path, achieved_min, achieved_avg = dijkstra_weighted(dist, start, goal, lam=lam, eps=eps)
+    if not path:
+        return {"status":"error","reason":"No path through corridor (check binarization)."}
+    # Overlay: threshold at T = max(1, floor(achieved_min))
+    used_T = int(np.floor(achieved_min))
+    safe = (dist >= max(1, used_T)).astype(np.uint8)
+    safe[0,:]=0; safe[-1,:]=0; safe[:,0]=0; safe[:,-1]=0
+
+
 
     # Draw overlay at original size
     base = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
@@ -413,7 +295,6 @@ def solve_centerline(image_path: str, args) -> Dict:
 
     out = {
         "status":"ok",
-        "mode": args.mode,
         "entrance": {"side": s1, "pos_px": entrance_pos_px},
         "exit":     {"side": s2, "pos_px": exit_pos_px},
         "solution_image": os.path.basename(out_png),
@@ -422,23 +303,14 @@ def solve_centerline(image_path: str, args) -> Dict:
         "threshold_equiv_original_px": float(used_T / max(scale,1e-6)),
         "path_length_px": len(path),
     }
-    if args.mode == "widest":
-        out.update({
-            "achieved_min_clearance_downscaled_px": float(achieved_min),
-            "achieved_min_clearance_equiv_original_px": float(achieved_min / max(scale,1e-6)),
-        })
-    if args.mode == "weighted":
-        out.update({
-            "achieved_min_clearance_downscaled_px": float(achieved_min),
-            "achieved_min_clearance_equiv_original_px": float(achieved_min / max(scale,1e-6)),
-            "weighted_lambda": float(args.lam),
-            "weighted_eps": float(args.eps),
-        })
-    if args.mode == "shortest":
-        out.update({
-            "min_clearance_downscaled_px": int(used_T),
-            "min_clearance_equiv_original_px": float(used_T / max(scale,1e-6)),
-        })
+    
+    out.update({
+        "achieved_min_clearance_downscaled_px": float(achieved_min),
+        "achieved_min_clearance_equiv_original_px": float(achieved_min / max(scale,1e-6)),
+        "weighted_lambda": float(args.lam),
+        "weighted_eps": float(args.eps),
+    })
+
     return out
 
 
@@ -446,16 +318,6 @@ def solve_centerline(image_path: str, args) -> Dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("image", help="Path to maze image")
-
-    ap.add_argument("--mode", choices=["widest","weighted","shortest"], default="widest",
-                    help="centerline strategy")
-
-    # For mode=shortest (hard min clearance)
-    ap.add_argument("--min-clearance", type=int, default=None, help="minimum clearance (original px; auto-scaled)")
-    ap.add_argument("--clearance-ref", choices=["original","downscaled"], default="original",
-                    help="interpret --min-clearance as original or downscaled px")
-    ap.add_argument("--min-clearance-mm", type=float, default=None, help="minimum clearance (mm)")
-    ap.add_argument("--maze-width-mm", type=float, default=None, help="maze drawing width (mm) for mm conversion")
 
     # For mode=weighted
     ap.add_argument("--lam", type=float, default=6.0, help="center preference strength (bigger -> more centered)")
@@ -473,9 +335,6 @@ def main():
 
     args = ap.parse_args()
 
-    if args.mode == "shortest" and (args.min_clearance is None and args.min_clearance_mm is None):
-        print(json.dumps({"status":"error","reason":"--min-clearance (or --min-clearance-mm) is required for mode=shortest"}))
-        return
     if args.min_clearance_mm is not None and args.maze_width_mm is None:
         print(json.dumps({"status":"error","reason":"--maze-width-mm is required with --min-clearance-mm"}))
         return
