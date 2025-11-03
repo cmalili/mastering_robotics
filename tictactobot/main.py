@@ -1,14 +1,14 @@
 import threading, time, queue, json, cv2
 from inference_sdk import InferenceHTTPClient
-from dobot_control_sim import draw_grid, draw_x, draw_o, move_to_camera_view, draw_E, draw_D, draw_win, draw_H, draw_R
-# from dobot_control draw_winners, check_winners
+from dobot_control import draw_grid, draw_x, draw_o, move_to_camera_view, draw_E, draw_D, draw_win, draw_H, draw_R
+#from dobot_control draw_winners, check_winners
 from game_manager import check_winner, is_draw
 from minimax import compute_best_move
 
 # === Configuration ===
 WORKSPACE = "chrisbench"
 WORKFLOW = "detect-and-classify-2"
-CAMERA_ID = 0                     # webcam ID
+CAMERA_ID = 2                     # webcam ID
 CAMERA_VIEW = (210, -2.26, 61.9)
 API_KEY   = "WoJSGAUeJ7yrujtftLdj"
 

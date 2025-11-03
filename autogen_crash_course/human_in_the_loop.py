@@ -32,7 +32,6 @@ user_agent = UserProxyAgent(
     input_func=input
 )
 
-
 termination_condition = TextMentionTermination("APPROVE")
 
 team = RoundRobinGroupChat(

@@ -5,12 +5,12 @@ from pydobotplus import Dobot
 device = Dobot(port="/dev/ttyACM0")  # adjust port
 device.speed(30, 30)
 
-GRID_SIZE = 23.33  # mm between cells
-START_X, START_Y, START_Z = 360, 48, 8.3  # adjust these for your workspace
-Z_DRAW = 8.3
+GRID_SIZE = 86.0/3.0  # mm between cells
+START_X, START_Y, START_Z = 308.09, 18.806, -8.086  # adjust these for your workspace
+Z_DRAW = -8.086
 LIFT_Z = 20
 
-CAMERA_VIEW = (210, -2.26, 61.9)
+CAMERA_VIEW = (210, 4.777, 5.771)
 
 def move_to_camera_view():
     print(f"[Robot] Moving to camera view position {CAMERA_VIEW}...")
@@ -19,7 +19,7 @@ def move_to_camera_view():
     print("[Robot] Camera in position for vision detection.")
 
 
-def draw_line(x1, y1, x2, y2, z=-10, lift_z=20):
+def draw_line(x1, y1, x2, y2, z=-8.086, lift_z=20):
     device.move_to(x1, y1, z + lift_z, 0)
     device.move_to(x1, y1, z, 0)
     device.move_to(x2, y2, z, 0)
@@ -28,9 +28,9 @@ def draw_line(x1, y1, x2, y2, z=-10, lift_z=20):
 def draw_grid():
     print("Drawing full Tic Tac Toe grid...")
 
-    CELL = 23.33333
+    CELL = 79.47/3.0
     ROWS, COLS = 3, 3
-    TOP_LEFT_X, TOP_LEFT_Y, Z = 360, 48, 8.3
+    TOP_LEFT_X, TOP_LEFT_Y, Z = 308.09, 18.806, -8.086
     BOTTOM_LEFT_X = TOP_LEFT_X - CELL * ROWS
     RIGHT_Y = TOP_LEFT_Y - CELL * COLS
 
@@ -50,7 +50,7 @@ def draw_grid():
 def move_to_cell_center(row, col):
     """Return x, y coordinate for a grid cell."""
     x = START_X - (col - 0.5) * GRID_SIZE
-    y = START_Y - (row - 0.5) * GRID_SIZE
+    y = START_Y - (row - 0.5 + 1) * GRID_SIZE
     return x, y
 
 def draw_x(row, col):
@@ -122,7 +122,7 @@ def draw_H():
     """Draw a capital 'H' below the D position."""
     print("Drawing H...")
 
-    z_draw = 8.3
+    z_draw = -8.086
     lift_z = 20
 
     # Position the H just below the D
@@ -197,7 +197,7 @@ def draw_R(segments=20):
     # --- 2️⃣ Upper half-circle (the "P" part) ---
     curve_points = []
     for i in range(segments // 2 + 1):
-        theta = math.pi/2 - math.pi * i / (segments // 2)  # 0 → π
+        theta = (math.pi/2 - math.pi * i / (segments // 2))  # 0 → π
 
         y = cy + math.cos(theta) * (width / 2)
         x = x_mid + height/4 + math.sin(theta) * (height / 4)

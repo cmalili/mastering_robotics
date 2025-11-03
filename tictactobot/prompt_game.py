@@ -8,7 +8,7 @@ from minimax import compute_best_move
 # === Configuration ===
 WORKSPACE = "chrisbench"
 WORKFLOW = "detect-and-classify-2"
-CAMERA_ID = 0                     # webcam ID
+CAMERA_ID = 2                     # webcam ID
 CAMERA_VIEW = (210, -2.26, 61.9)
 API_KEY   = "WoJSGAUeJ7yrujtftLdj"
 

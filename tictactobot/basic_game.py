@@ -8,7 +8,7 @@ from minimax import compute_best_move
 # === Configuration ===
 WORKSPACE = "chrisbench"
 WORKFLOW = "detect-and-classify-2"
-CAMERA_ID = 0                     # webcam ID
+CAMERA_ID = 0                    # webcam ID
 CAMERA_VIEW = (210, -2.26, 61.9)
 API_KEY   = "WoJSGAUeJ7yrujtftLdj"
 
@@ -30,6 +30,9 @@ def vision_loop():
 
     print("[Vision] Thread started.")
     cap = cv2.VideoCapture(CAMERA_ID)
+
+    #cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    #cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     tmp_path = "frame.jpg"
 
     while not stop_flag.is_set():
@@ -297,6 +300,7 @@ def robot_game_loop():
 
     # Robot goes first
     turn = "robot"
+    time.sleep(500)
 
     # --- Main game loop ---
     while not stop_flag.is_set():
