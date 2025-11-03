@@ -2,12 +2,6 @@
 """
 Pixel-only maze solver with centerline options:
 
-Modes
------
-- widest      : Max–min clearance (centerline by maximizing the minimum distance to walls).
-- weighted    : Shortest path with distance-to-wall penalty (tunable lambda).
-- shortest    : Shortest path subject to a hard minimum clearance (like your BFS with clearance).
-
 Common pipeline
 ---------------
 1) Read image, optional downscale (auto-scales your units).
@@ -275,7 +269,6 @@ def solve_centerline(image_path: str, args) -> Dict:
     safe[0,:]=0; safe[-1,:]=0; safe[:,0]=0; safe[:,-1]=0
 
 
-
     # Draw overlay at original size
     base = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
     out_small = draw_safe_and_path_on_canvas(base.copy(), safe, path, (y0,y1,x0,x1))
@@ -317,10 +310,10 @@ def solve_centerline(image_path: str, args) -> Dict:
 # ---------- CLI ----------
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("image", help="Path to maze image")
+    ap.add_argument("--image", default="data/images/maze.jpg", help="Path to maze image")
 
     # For mode=weighted
-    ap.add_argument("--lam", type=float, default=6.0, help="center preference strength (bigger -> more centered)")
+    ap.add_argument("--lam", type=float, default=1000.0, help="center preference strength (bigger -> more centered)")
     ap.add_argument("--eps", type=float, default=1.0, help="stability term in cost 1 + lam/(eps+dist)")
 
     # Speed/robustness
@@ -331,13 +324,9 @@ def main():
 
     # Behavior
     ap.add_argument("--prefer-lr", action="store_true", help="prefer left-right openings if top-bottom absent")
-    ap.add_argument("--include-gate", action="store_true", help="widest: include gate slit in clearance score")
+    #ap.add_argument("--include-gate", action="store_true", help="widest: include gate slit in clearance score")
 
     args = ap.parse_args()
-
-    if args.min_clearance_mm is not None and args.maze_width_mm is None:
-        print(json.dumps({"status":"error","reason":"--maze-width-mm is required with --min-clearance-mm"}))
-        return
 
     res = solve_centerline(args.image, args)
     print(json.dumps(to_py(res), indent=2))

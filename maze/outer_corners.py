@@ -25,8 +25,27 @@ import numpy as np
 import cv2
 from pathlib import Path
 
-# ---- import your working Shi–Tomasi detector ----
-from detect_corners_classical import shi_tomasi  # same directory
+
+def draw_points(img, pts, color=(0,0,255), radius=3):
+    for (x, y) in pts.astype(int):
+        cv2.circle(img, (x, y), radius, color, -1, lineType=cv2.LINE_AA)
+
+def shi_tomasi(gray, max_corners=1000, quality=0.2, min_dist=500, block_size=9, subpix=False):
+    """Shi–Tomasi Good Features to Track."""
+    corners = cv2.goodFeaturesToTrack(
+        gray, maxCorners=max_corners, qualityLevel=quality, minDistance=min_dist,
+        blockSize=block_size, useHarrisDetector=False, k=0.04
+    )
+    if corners is None:
+        return np.empty((0,2), np.float32)
+    pts = corners.reshape(-1, 2).astype(np.float32)
+
+    if subpix and len(pts) > 0:
+        # Subpixel refinement (optional)
+        term = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 40, 0.01)
+        pts_ref = cv2.cornerSubPix(gray, pts.reshape(-1,1,2), (7,7), (-1,-1), term)
+        pts = pts_ref.reshape(-1,2).astype(np.float32)
+    return pts
 
 # ---------------------- small helpers ----------------------
 
@@ -209,10 +228,7 @@ def main():
         "BL": image_corners[3]
     }
 
-    save_json(the_corners, args.corners_json)
-
-    
-        
+    save_json(the_corners, args.corners_json)      
 
 if __name__ == "__main__":
     main()
