@@ -10,6 +10,6 @@ print(pose)
 
 device.speed(10, 10)
 
-device.move_to(240, 0, 130, 0)
+device.move_to(215.56, -5.8, 53.62, 0)
 
 device.close()

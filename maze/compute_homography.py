@@ -129,14 +129,13 @@ def _draw_backprojection_overlay(img_bgr: np.ndarray, H: np.ndarray,
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--image", type=str, default="data/images/maze.jpg", help="Path to input image (used for overlay/rectified).")
+    ap.add_argument("--image", type=str, default="data/images/frame_100.png", help="Path to input image (used for overlay/rectified).")
     ap.add_argument("--corners-json", default="data/calibration/maze_corners.json", help="4x2 TL,TR,BR,BL pixel corners from detector.")
 
     ap.add_argument("--out-npy", default="data/calibration/homography.npy", help="Save H (pixels->target) here as .npy")
     ap.add_argument("--overlay", type=str, default="data/images/backprojection.png", help="Save backprojection overlay PNG here.")
     ap.add_argument("--grid-step", type=float, default=None, help="Grid step in target units (px for rect, mm for robot).")
 
-    # Robot mode options
     ap.add_argument("--robot-corners-json", type=str, default="data/calibration/robot_corners.json",
                     help="4x2 TL,TR,BR,BL in robot units (alternative to --robot-corners).")
 
@@ -152,7 +151,9 @@ def main():
     C = _order_tl_tr_br_bl(C)
 
     D = read_corners_json(args.robot_corners_json)
-    D = _order_tl_tr_br_bl(D)
+    #D = _order_tl_tr_br_bl(D)
+    print(f"D = {D}")
+
     
     # --- Compute H : pixels -> target ---
     H = cv2.getPerspectiveTransform(C.astype(np.float32), D.astype(np.float32))

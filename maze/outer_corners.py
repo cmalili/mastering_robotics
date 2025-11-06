@@ -136,15 +136,15 @@ def _max_area_quad_from_hull(H: np.ndarray):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--image", type=str, default="data/images/maze.jpg")
+    ap.add_argument("--image", type=str, default="data/images/frame_100.png")
     ap.add_argument("--overlay", type=str, default="data/images/maze_overlay.png", help="Save visualization PNG.")
 
     ap.add_argument("--corners-json", type=str, default="data/calibration/maze_corners.json", help="Save TL,TR,BR,BL to .json")
 
     # Detection params (used only if --points-npy is not given)
     ap.add_argument("--max-corners", type=int, default=1500)
-    ap.add_argument("--quality", type=float, default=0.2)
-    ap.add_argument("--min-dist", type=float, default=500)
+    ap.add_argument("--quality", type=float, default=0.001)
+    ap.add_argument("--min-dist", type=float, default=50)
     ap.add_argument("--block-size", type=int, default=9)
     ap.add_argument("--subpix", action="store_true")
 
