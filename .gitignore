@@ -1,60 +1,46 @@
-maze/autogen_maze/lib/
+
+*.7z
 autogen_crash_course/.env
-# large/binary assets
-*.pt
-*.weights
-*.onnx
-*.ckpt
-*.pth
-*.tflite
-*.pb
 *.bin
-*.zip
+# binary/media we don't track
+# build / cache / env
+*.ckpt
+**/.env
+*.env
+.env
+*.gif
+# images/videos if you don’t need them versioned
+*.jpeg
+*.jpg
+# large/binary assets
+maze/autogen_maze/bin/
+maze/autogen_maze/lib/
+maze/.env
+maze/__pycache__/
+# media we don't want tracked
+*.mov
+*.mp4
+# never commit secrets
+*.onnx
+*.pb
+*.png
+# project-specific env
+*.pt
+*.pth
+*.pyc
+**/__pycache__/
+__pycache__/
+# python caches/envs
+# Python environments / caches
+# secrets
 *.tar
 *.tar.gz
-*.7z
-# images/videos if you don’t need them versioned
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.mp4
-*.mov
-__pycache__/
-# binary/media we don't track
-*.png
-*.jpg
-*.jpeg
-# build / cache / env
-__pycache__/
-*.pyc
-maze/__pycache__/
-maze/autogen_maze/bin/
-# media we don't want tracked
-*.png
-*.jpg
-*.jpeg
-
-# secrets
-.env
-*.env
-maze/.env
-
-# never commit secrets
-.env
-**/.env
-
-# Python environments / caches
-venv/
-.venv/
-**/venv/
-**/.venv/
-**/__pycache__/
-*.pyc
-
-# project-specific env
+*.tflite
 tictactobot/xo_env/
+**/.venv/
+**/venv/
+.venv/
+venv/
+*.weights
 **/xo_env/
-
-__pycache__/
-*.pyc
+*.zip
