@@ -2,12 +2,15 @@
 # autogen build tree
 autogen_maze/
 # caches
+# data assets (do not track)
 # env
 .env
 *.jpeg
 *.jpg
 maze/autogen_maze/
 maze/autogen_maze/**
+maze/data/
+maze/data/**
 # media
 *.png
 *.pyc
