@@ -1,1 +1,11 @@
+
 autogen_maze/
+# caches
+# env
+.env
+*.jpeg
+*.jpg
+# media
+*.png
+*.pyc
+__pycache__/
