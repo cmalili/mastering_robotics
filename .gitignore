@@ -39,3 +39,7 @@ maze/autogen_maze/bin/
 .env
 *.env
 maze/.env
+
+# never commit secrets
+.env
+**/.env
