@@ -30,6 +30,7 @@ maze/__pycache__/
 *.pyc
 **/__pycache__/
 __pycache__/
+# python caches
 # python caches/envs
 # Python environments / caches
 # secrets
