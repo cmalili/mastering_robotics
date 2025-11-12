@@ -34,3 +34,8 @@ maze/autogen_maze/bin/
 *.png
 *.jpg
 *.jpeg
+
+# secrets
+.env
+*.env
+maze/.env
