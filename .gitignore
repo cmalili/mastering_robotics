@@ -16,3 +16,15 @@ maze/*.jpeg
 tictactobot/*.png
 tictactobot/*.jpg
 tictactobot/*.jpeg
+
+*.env
+**/.env
+**/xo_env/
+__pycache__/
+*.pyc
+maze/examples/
+maze/*.png
+maze/*.jpg
+tictactobot/*.png
+tictactobot/*.jpg
+
