@@ -1,47 +1,18 @@
-
-*.7z
-autogen_crash_course/.env
-*.bin
-# binary/media we don't track
-# build / cache / env
-*.ckpt
-**/.env
-*.env
-.env
-*.gif
-# images/videos if you don’t need them versioned
-*.jpeg
-*.jpg
-# large/binary assets
-maze/autogen_maze/bin/
-maze/autogen_maze/lib/
-maze/.env
-maze/__pycache__/
-# media we don't want tracked
-*.mov
-*.mp4
-# never commit secrets
-*.onnx
-*.pb
-*.png
-# project-specific env
-*.pt
-*.pth
-*.pyc
-**/__pycache__/
-__pycache__/
-# python caches
-# python caches/envs
-# Python environments / caches
-# secrets
-*.tar
-*.tar.gz
-*.tflite
-tictactobot/xo_env/
-**/.venv/
-**/venv/
-.venv/
-venv/
-*.weights
+# Python envs / caches
 **/xo_env/
-*.zip
+venv/
+.venv/
+**/__pycache__/
+*.pyc
+
+# Tutorial/build artifacts
+autogen_crash_course/**/lib/
+
+# Project images & sample data you don't want in Git
+maze/examples/
+maze/*.png
+maze/*.jpg
+maze/*.jpeg
+tictactobot/*.png
+tictactobot/*.jpg
+tictactobot/*.jpeg
