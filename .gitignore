@@ -43,3 +43,15 @@ maze/.env
 # never commit secrets
 .env
 **/.env
+
+# Python environments / caches
+venv/
+.venv/
+**/venv/
+**/.venv/
+**/__pycache__/
+*.pyc
+
+# project-specific env
+tictactobot/xo_env/
+**/xo_env/
